@@ -2,75 +2,55 @@ import os
 import requests
 from flask import Flask, request, jsonify
 import telebot
-from Bale import BaleBot
 
 app = Flask(__name__)
 
-# تنظیمات
+# تنظیمات از متغیرهای محیطی
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 BALE_TOKEN = os.getenv('BALE_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 BALE_CHAT_ID = os.getenv('BALE_CHAT_ID')
 
-# ایجاد بات‌ها
+# ایجاد بات تلگرام
 telegram_bot = telebot.TeleBot(TELEGRAM_TOKEN)
-bale_bot = BaleBot(BALE_TOKEN)
 
-def get_file_url(file_id, bot, chat_id):
-    """دریافت لینک دانلود فایل"""
+def send_to_bale(text, file_url=None, file_type=None, caption=""):
+    """ارسال پیام به بله"""
+    url = "https://tapi.bale.ai/sendMessage"
+    headers = {
+        'Authorization': f'Bearer {BALE_TOKEN}',
+        'Content-Type': 'application/json'
+    }
+    
+    if file_url:
+        # ارسال فایل
+        if file_type == 'photo':
+            payload = {'chat_id': BALE_CHAT_ID, 'photo': file_url, 'caption': caption}
+        elif file_type == 'video':
+            payload = {'chat_id': BALE_CHAT_ID, 'video': file_url, 'caption': caption}
+        elif file_type == 'document':
+            payload = {'chat_id': BALE_CHAT_ID, 'document': file_url, 'caption': caption}
+        elif file_type == 'voice':
+            payload = {'chat_id': BALE_CHAT_ID, 'voice': file_url}
+        elif file_type == 'audio':
+            payload = {'chat_id': BALE_CHAT_ID, 'audio': file_url}
+    else:
+        payload = {'chat_id': BALE_CHAT_ID, 'text': text}
+    
     try:
-        file = bot.get_file(file_id)
+        response = requests.post(url, json=payload, headers=headers)
+        print(f"Bale response: {response.status_code}")
+    except Exception as e:
+        print(f"Error sending to Bale: {e}")
+
+def get_file_url(file_id):
+    """دریافت لینک دانلود فایل از تلگرام"""
+    try:
+        file = telegram_bot.get_file(file_id)
         return f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file.file_path}"
     except Exception as e:
         print(f"Error getting file URL: {e}")
         return None
-
-def forward_to_bale(message, file_url=None):
-    """ارسال به بله"""
-    try:
-        if message.text:
-            bale_bot.send_message(BALE_CHAT_ID, message.text)
-        elif message.photo:
-            file_id = message.photo[-1].file_id
-            if file_url:
-                bale_bot.send_photo(BALE_CHAT_ID, file_url, caption=message.caption or "")
-        elif message.video:
-            if file_url:
-                bale_bot.send_video(BALE_CHAT_ID, file_url, caption=message.caption or "")
-        elif message.document:
-            if file_url:
-                bale_bot.send_document(BALE_CHAT_ID, file_url, caption=message.caption or "")
-        elif message.voice:
-            if file_url:
-                bale_bot.send_voice(BALE_CHAT_ID, file_url)
-        elif message.audio:
-            if file_url:
-                bale_bot.send_audio(BALE_CHAT_ID, file_url)
-    except Exception as e:
-        print(f"Error forwarding to Bale: {e}")
-
-def forward_to_telegram(message, file_url=None):
-    """ارسال به تلگرام"""
-    try:
-        if message.text:
-            telegram_bot.send_message(TELEGRAM_CHAT_ID, message.text)
-        elif message.photo:
-            if file_url:
-                telegram_bot.send_photo(TELEGRAM_CHAT_ID, file_url, caption=message.caption or "")
-        elif message.video:
-            if file_url:
-                telegram_bot.send_video(TELEGRAM_CHAT_ID, file_url, caption=message.caption or "")
-        elif message.document:
-            if file_url:
-                telegram_bot.send_document(TELEGRAM_CHAT_ID, file_url, caption=message.caption or "")
-        elif message.voice:
-            if file_url:
-                telegram_bot.send_voice(TELEGRAM_CHAT_ID, file_url)
-        elif message.audio:
-            if file_url:
-                telegram_bot.send_audio(TELEGRAM_CHAT_ID, file_url)
-    except Exception as e:
-        print(f"Error forwarding to Telegram: {e}")
 
 # وب‌هوک تلگرام
 @app.route(f'/{TELEGRAM_TOKEN}', methods=['POST'])
@@ -81,18 +61,29 @@ def telegram_webhook():
         
         if message and str(message.chat.id) == str(TELEGRAM_CHAT_ID):
             file_url = None
-            if message.photo:
-                file_url = get_file_url(message.photo[-1].file_id, telegram_bot, TELEGRAM_CHAT_ID)
-            elif message.video:
-                file_url = get_file_url(message.video.file_id, telegram_bot, TELEGRAM_CHAT_ID)
-            elif message.document:
-                file_url = get_file_url(message.document.file_id, telegram_bot, TELEGRAM_CHAT_ID)
-            elif message.voice:
-                file_url = get_file_url(message.voice.file_id, telegram_bot, TELEGRAM_CHAT_ID)
-            elif message.audio:
-                file_url = get_file_url(message.audio.file_id, telegram_bot, TELEGRAM_CHAT_ID)
+            file_type = None
+            caption = message.caption or ""
             
-            forward_to_bale(message, file_url)
+            if message.photo:
+                file_type = 'photo'
+                file_url = get_file_url(message.photo[-1].file_id)
+            elif message.video:
+                file_type = 'video'
+                file_url = get_file_url(message.video.file_id)
+            elif message.document:
+                file_type = 'document'
+                file_url = get_file_url(message.document.file_id)
+            elif message.voice:
+                file_type = 'voice'
+                file_url = get_file_url(message.voice.file_id)
+            elif message.audio:
+                file_type = 'audio'
+                file_url = get_file_url(message.audio.file_id)
+            
+            if file_url:
+                send_to_bale("", file_url, file_type, caption)
+            elif message.text:
+                send_to_bale(message.text)
         
         return jsonify({'ok': True})
     except Exception as e:
@@ -103,4 +94,23 @@ def telegram_webhook():
 @app.route(f'/bale_webhook_{BALE_TOKEN}', methods=['POST'])
 def bale_webhook():
     try:
-        data = req…
+        data = request.get_json()
+        
+        if data and 'message' in data:
+            msg = data['message']
+            chat_id = msg.get('chat', {}).get('id')
+            
+            if str(chat_id) == str(BALE_CHAT_ID):
+                text = msg.get('text', '')
+                photo = msg.get('photo', [])
+                video = msg.get('video', {})
+                document = msg.get('document', {})
+                voice = msg.get('voice', {})
+                audio = msg.get('audio', {})
+                
+                file_url = None
+                file_type = None
+                caption = ""
+                
+                if photo:
+                    file_…
