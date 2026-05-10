@@ -18,7 +18,7 @@ def send_to_bale(text, file_url=None, file_type=None, caption=""):
     
     if file_url:
         if file_type == 'photo':
-            payload = {'chat_id': BALE_CHAT_ ID, 'photo': file_url, 'caption': caption}
+            payload = {'chat_id': BALE_CHAT_ID, 'photo': file_url, 'caption': caption}
         elif file_type == 'video':
             payload = {'chat_id': BALE_CHAT_ID, 'video': file_url, 'caption': caption}
         elif file_type == 'document':
