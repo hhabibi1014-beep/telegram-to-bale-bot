@@ -1,60 +1,106 @@
 import os
 import requests
-from telegram import Bot
-from telegram.ext import Updater, MessageHandler, Filters
+from flask import Flask, request, jsonify
+import telebot
+from Bale import BaleBot
 
-# توکن‌ها
-TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN', '8604521579:AAGaGnQAGAsUCwnglICGOF7tKP3SIpxDr40')
-BALE_TOKEN = os.getenv('BALE_TOKEN', '1460285521:Mw1SZUhzaDW2wzu6QBKryMfO_SPYjvaxIvA')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '315946834')
-BALE_CHAT_ID = os.getenv('BALE_CHAT_ID', '1511382713')
+app = Flask(__name__)
 
-telegram_bot = Bot(token=TELEGRAM_TOKEN)
+# تنظیمات
+TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
+BALE_TOKEN = os.getenv('BALE_TOKEN')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+BALE_CHAT_ID = os.getenv('BALE_CHAT_ID')
 
-def send_to_bale(text):
-    """ارسال پیام به بله"""
-    url = "https://tapi.bale.ai/sendMessage"
-    headers = {
-        'Authorization': f'Bearer {BALE_TOKEN}',
-        'Content-Type': 'application/json'
-    }
-    payload = {
-        'chat_id': BALE_CHAT_ID,
-        'text': text
-    }
+# ایجاد بات‌ها
+telegram_bot = telebot.TeleBot(TELEGRAM_TOKEN)
+bale_bot = BaleBot(BALE_TOKEN)
+
+def get_file_url(file_id, bot, chat_id):
+    """دریافت لینک دانلود فایل"""
     try:
-        response = requests.post(url, json=payload, headers=headers)
-        print(f"Bale: {response.status_code}")
-        return response.ok
+        file = bot.get_file(file_id)
+        return f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file.file_path}"
     except Exception as e:
-        print(f"Error: {e}")
-        return False
+        print(f"Error getting file URL: {e}")
+        return None
 
-def send_to_telegram(text):
-    """ارسال پیام به تلگرام"""
+def forward_to_bale(message, file_url=None):
+    """ارسال به بله"""
     try:
-        telegram_bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=text)
-        return True
+        if message.text:
+            bale_bot.send_message(BALE_CHAT_ID, message.text)
+        elif message.photo:
+            file_id = message.photo[-1].file_id
+            if file_url:
+                bale_bot.send_photo(BALE_CHAT_ID, file_url, caption=message.caption or "")
+        elif message.video:
+            if file_url:
+                bale_bot.send_video(BALE_CHAT_ID, file_url, caption=message.caption or "")
+        elif message.document:
+            if file_url:
+                bale_bot.send_document(BALE_CHAT_ID, file_url, caption=message.caption or "")
+        elif message.voice:
+            if file_url:
+                bale_bot.send_voice(BALE_CHAT_ID, file_url)
+        elif message.audio:
+            if file_url:
+                bale_bot.send_audio(BALE_CHAT_ID, file_url)
     except Exception as e:
-        print(f"Error: {e}")
-        return False
+        print(f"Error forwarding to Bale: {e}")
 
-def handle_telegram(update, context):
-    """تلگرام → بله"""
-    msg = update.message
-    if not msg:
-        return
-    
-    text = msg.text or msg.caption or "پیام جدید"
-    send_to_bale(f"📱 از تلگرام:\n{text}")
+def forward_to_telegram(message, file_url=None):
+    """ارسال به تلگرام"""
+    try:
+        if message.text:
+            telegram_bot.send_message(TELEGRAM_CHAT_ID, message.text)
+        elif message.photo:
+            if file_url:
+                telegram_bot.send_photo(TELEGRAM_CHAT_ID, file_url, caption=message.caption or "")
+        elif message.video:
+            if file_url:
+                telegram_bot.send_video(TELEGRAM_CHAT_ID, file_url, caption=message.caption or "")
+        elif message.document:
+            if file_url:
+                telegram_bot.send_document(TELEGRAM_CHAT_ID, file_url, caption=message.caption or "")
+        elif message.voice:
+            if file_url:
+                telegram_bot.send_voice(TELEGRAM_CHAT_ID, file_url)
+        elif message.audio:
+            if file_url:
+                telegram_bot.send_audio(TELEGRAM_CHAT_ID, file_url)
+    except Exception as e:
+        print(f"Error forwarding to Telegram: {e}")
 
-def main():
-    updater = Updater(token=TELEGRAM_TOKEN, use_context=True)
-    updater.dispatcher.add_handler(MessageHandler(Filters.text | Filters.photo | Filters.video, handle_telegram))
-    
-    print("🤖 ربات شروع به کار کرد")
-    updater.start_polling()
-    updater.idle()
+# وب‌هوک تلگرام
+@app.route(f'/{TELEGRAM_TOKEN}', methods=['POST'])
+def telegram_webhook():
+    try:
+        update = telebot.types.Update.de_json(request.get_json(force=True))
+        message = update.message
+        
+        if message and str(message.chat.id) == str(TELEGRAM_CHAT_ID):
+            file_url = None
+            if message.photo:
+                file_url = get_file_url(message.photo[-1].file_id, telegram_bot, TELEGRAM_CHAT_ID)
+            elif message.video:
+                file_url = get_file_url(message.video.file_id, telegram_bot, TELEGRAM_CHAT_ID)
+            elif message.document:
+                file_url = get_file_url(message.document.file_id, telegram_bot, TELEGRAM_CHAT_ID)
+            elif message.voice:
+                file_url = get_file_url(message.voice.file_id, telegram_bot, TELEGRAM_CHAT_ID)
+            elif message.audio:
+                file_url = get_file_url(message.audio.file_id, telegram_bot, TELEGRAM_CHAT_ID)
+            
+            forward_to_bale(message, file_url)
+        
+        return jsonify({'ok': True})
+    except Exception as e:
+        print(f"Telegram webhook error: {e}")
+        return jsonify({'ok': False, 'error': str(e)}), 500
 
-if __name__ == '__main__':
-    main()
+# وب‌هوک بله
+@app.route(f'/bale_webhook_{BALE_TOKEN}', methods=['POST'])
+def bale_webhook():
+    try:
+        data = req…
