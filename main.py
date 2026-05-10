@@ -113,4 +113,4 @@ def bale_webhook():
                 caption = ""
                 
                 if photo:
-                    file_…
+                    file_ = audio.get('file_id')
