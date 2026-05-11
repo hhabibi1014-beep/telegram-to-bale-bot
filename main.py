@@ -21,6 +21,18 @@ def webhook():
         print(f"Error: {e}")
     return jsonify({'ok': True})
 
+# تست بله
+@app.route('/test-bale', methods=['GET'])
+def test_bale():
+    try:
+        r = requests.post(
+            f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendMessage",
+            json={'chat_id': BALE_CHAT_ID, 'text': 'تست از سرور!'}
+        )
+        return jsonify({'status': r.status_code, 'response': r.text})
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
 @telegram_bot.message_handler(content_types=['photo', 'document', 'audio', 'video'])
 def handle_media(message):
     try:
@@ -47,13 +59,13 @@ def handle_media(message):
             response = requests.get(file_url)
             
             requests.post(
-                f"https://api.bale.ai/bot{BALE_TOKEN}/sendMessage",
+                f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendMessage",
                 json={'chat_id': BALE_CHAT_ID, 'text': f'پیام از تلگرام:\n{message.text or ""}'}
             )
             
             files = {'file': (file_name, response.content)}
             requests.post(
-                f"https://api.bale.ai/bot{BALE_TOKEN}/sendDocument",
+                f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendDocument",
                 json={'chat_id': BALE_CHAT_ID},
                 files=files
             )
