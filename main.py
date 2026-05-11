@@ -52,12 +52,13 @@ def handle_media(message):
             file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file_info.file_path}"
             file_content = requests.get(file_url).content
             
-            # ارسال فایل به Bale با caption
-            files = {'document': (file_name, file_content)}
+            # آماده‌سازی دیتا با caption
             data = {'chat_id': BALE_CHAT_ID}
+            if text:
+                data['caption'] = text
             
+            # ارسال فایل به Bale
             if file_type == "photo":
-                # برای عکس از sendPhoto استفاده می‌کنیم
                 files = {'photo': (file_name, file_content)}
                 r = requests.post(
                     f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendPhoto",
@@ -65,7 +66,7 @@ def handle_media(message):
                     files=files
                 )
             else:
-                # برای بقیه فایل‌ها
+                files = {'document': (file_name, file_content)}
                 r = requests.post(
                     f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendDocument",
                     data=data,
