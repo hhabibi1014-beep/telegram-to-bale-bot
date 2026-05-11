@@ -81,7 +81,7 @@ def bale_webhook():
             else:
                 telegram_bot.send_document(TELEGRAM_CHAT_ID, file_content, caption=msg_text)
         else:
-            telegram_bot.send_message(TELEGRAM_CHAT_ID, f"Ù¾ÛŒØ§Ù… Ø§Ø² Bale:\n{msg_text}")
+            telegram_bot.send_message(TELEGRAM_CHAT_ID, f"Ã™Â¾Ã›Å’Ã˜Â§Ã™â€¦ Ã˜Â§Ã˜Â² Bale:\n{msg_text}")
         
     except Exception as e:
         print("Bale webhook error: " + str(e))
@@ -164,12 +164,12 @@ def handle_media(message):
             text = message.caption or message.text or ""
             
             file_info = telegram_bot.get_file(file_id)
-            file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file_info.file_path"
+            file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file_info.file_path}"
             file_content = requests.get(file_url).content
             
             r = send_to_bale(file_content, file_name, file_type, text)
             
-            print(f"Bale response: {r.status_code} - {r.text}")
+            print(f"Bale response: {r.status_org} - {r.text}")
             
             if r and r.status_code == 200:
                 telegram_bot.reply_to(message, "∮یام از Bale9i��")
