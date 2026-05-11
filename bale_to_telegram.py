@@ -1,1 +1,42 @@
-ZnJvbSBmbGFzayBpbXBvcnQgRmxhc2ssIHJlcXVlc3QsIGpzb25pZnkKaW1wb3J0IHRlbGVib3QKaW1wb3J0IHJlcXVlc3RzCmltcG9ydCBvcwoKYXBwID0gRmxhc2soX19uYW1lX18pCgpURUxFR1JBTV9UT0tFTiA9IG9zLmdldGVudignVEVMRUdSQU1fVE9LRU4nKQpCQUxFX1RPS0VOID0gb3MuZ2V0ZW52KCdCQUxFX1RPS0VOJykKVEVMRUdSQU1fQ0hBVF9JRCA9IG9zLmdldGVudignVEVMRUdSQU1fQ0hBVF9JRCcpCkJBTEVfQ0hBVF9JRCA9IG9zLmdldGVudignQkFMRV9DSEFUX0lEJykKCnRlbGVncmFtX2JvdCA9IHRlbGVib3QuVGVsZUJvdChURUxFR1JBTV9UT0tFTikKCkBhcHAucm91dGUoJy9iYWxlX3dlYmhvb2snLCBtZXRob2RzPVsnUE9TVCddKQpkZWYgYmFsZV93ZWJob29rKCk6CiAgICB0cnk6CiAgICAgICAgZGF0YSA9IHJlcXVlc3QuZ2V0X2pzb24oKQogICAgICAgIGlmIG5vdCBkYXRhOgogICAgICAgICAgICByZXR1cm4ganNvbmlmeSh7J29rJzogVHJ1ZX0pCiAgICAgICAgCiAgICAgICAgbWVzc2FnZSA9IGRhdGEuZ2V0KCdtZXNzYWdlJywge30pCiAgICAgICAgY2hhdCA9IG1lc3NhZ2UuZ2V0KCdjaGF0Jywge30pCiAgICAgICAgCiAgICAgICAgaWYgc3RyKGNoYXQuZ2V0KCdpZCcpKSAhPSBzdHIoQkFMRV9DSEFUX0lEKToKICAgICAgICAgICAgcmV0dXJuIGpzb25pZnkoeydvayc6IFRydWV9KQogICAgICAgIAogICAgICAgIHRleHQgPSBtZXNzYWdlLmdldCgndGV4dCcsICcnKQogICAgICAgIGNhcHRpb24gPSBtZXNzYWdlLmdldCgnY2FwdGlvbicsICcnKQogICAgICAgIAogICAgICAgIGZpbGVfaWQgPSBOb25lCiAgICAgICAgZmlsZV90eXBlID0gTm9uZQogICAgICAgIGZpbGVfbmFtZSA9ICJmaWxlIgogICAgICAgIAogICAgICAgIGlmICdwaG90bycgaW4gbWVzc2FnZToKICAgICAgICAgICAgcGhvdG8gPSBtZXNzYWdlWydwaG90byddWy0xXQogICAgICAgICAgICBmaWxlX2lkID0gcGhvdG8uZ2V0KCdmaWxlX2lkJykKICAgICAgICAgICAgZmlsZV90eXBlID0gInBob3RvIgogICAgICAgIGVsaWYgJ2RvY3VtZW50JyBpbiBtZXNzYWdlOgogICAgICAgICAgICBkb2MgPSBtZXNzYWdlWydkb2N1bWVudCddCiAgICAgICAgICAgIGZpbGVfaWQgPSBkb2MuZ2V0KCdmaWxlX2lkJykKICAgICAgICAgICAgZmlsZV90eXBlID0gImRvY3VtZW50IgogICAgICAgICAgICBmaWxlX25hbWUgPSBkb2MuZ2V0KCdmaWxlX25hbWUnLCAnZmlsZScpCiAgICAgICAgZWxpZiAnYXVkaW8nIGluIG1lc3NhZ2U6CiAgICAgICAgICAgIGF1ZGlvID0gbWVzc2FnZVsnYXVkaW8nXQogICAgICAgICAgICBmaWxlX2lkID0gYXVkaW8uZ2V0KCdmaWxlX2lkJykKICAgICAgICAgICAgZmlsZV90eXBlID0gImF1ZGlvIgogICAgICAgICAgICBmaWxlX25hbWUgPSBhdWRpby5nZXQoJ2ZpbGVfbmFtZScsICdhdWRpby5tcDMnKQogICAgICAgIGVsaWYgJ3ZvaWNlJyBpbiBtZXNzYWdlOgogICAgICAgICAgICB2b2ljZSA9IG1lc3NhZ2VbJ3ZvaWNlJ10KICAgICAgICAgICAgZmlsZV9pZCA9IHZvaWNlLmdldCgnZmlsZV9pZCcpCiAgICAgICAgICAgIGZpbGVfdHlwZSA9ICJ2b2ljZSIKICAgICAgICAgICAgZmlsZV9uYW1lID0gInZvaWNlLm9nZyIKICAgICAgICBlbGlmICd2aWRlbycgaW4gbWVzc2FnZToKICAgICAgICAgICAgdmlkZW8gPSBtZXNzYWdlWyd2aWRlbyddCiAgICAgICAgICAgIGZpbGVfaWQgPSB2aWRlby5nZXQoJ2ZpbGVfaWQnKQogICAgICAgICAgICBmaWxlX3R5cGUgPSAidmlkZW8iCiAgICAgICAgICAgIGZpbGVfbmFtZSA9IHZpZGVvLmdldCgnZmlsZV9uYW1lJywgJ3ZpZGVvLm1wNCcpCiAgICAgICAgCiAgICAgICAgbXNnX3RleHQgPSB0ZXh0IG9yIGNhcHRpb24gb3IgIiIKICAgICAgICAKICAgICAgICBpZiBmaWxlX2lkOgogICAgICAgICAgICBmaWxlX3VybCA9IGYiaHR0cHM6Ly90YXBpLmJhbGUuYWkvZmlsZS9ib3R7QkFMRV9UT0tFTn0ve2ZpbGVfaWR9IgogICAgICAgICAgICBmaWxlX2NvbnRlbnQgPSByZXF1ZXN0cy5nZXQoZmlsZV91cmwpLmNvbnRlbnQKICAgICAgICAgICAgCiAgICAgICAgICAgIGlmIGZpbGVfdHlwZSA9PSAicGhvdG8iOgogICAgICAgICAgICAgICAgdGVsZWdyYW1fYm90LnNlbmRfcGhvdG8oVEVMRUdSQU1fQ0hBVF9JRCwgZmlsZV9jb250ZW50LCBjYXB0aW9uPW1zZ190ZXh0KQogICAgICAgICAgICBlbGlmIGZpbGVfdHlwZSA9PSAidmlkZW8iOgogICAgICAgICAgICAgICAgdGVsZWdyYW1fYm90LnNlbmRfdmlkZW8oVEVMRUdSQU1fQ0hBVF9JRCwgZmlsZV9jb250ZW50LCBjYXB0aW9uPW1zZ190ZXh0KQogICAgICAgICAgICBlbGlmIGZpbGVfdHlwZSA9PSAiYXVkaW8iIG9yIGZpbGVfdHlwZSA9PSAidm9pY2UiOgogICAgICAgICAgICAgICAgdGVsZWdyYW1fYm90LnNlbmRfYXVkaW8oVEVMRUdSQU1fQ0hBVF9JRCwgZmlsZV9jb250ZW50LCBjYXB0aW9uPW1zZ190ZXh0KQogICAgICAgICAgICBlbHNlOgogICAgICAgICAgICAgICAgdGVsZWdyYW1fYm90LnNlbmRfZG9jdW1lbnQoVEVMRUdSQU1fQ0hBVF9JRCwgZmlsZV9jb250ZW50LCBjYXB0aW9uPW1zZ190ZXh0KQogICAgICAgIGVsc2U6CiAgICAgICAgICAgIHRlbGVncmFtX2JvdC5zZW5kX21lc3NhZ2UoVEVMRUdSQU1fQ0hBVF9JRCwgZiLDmcK+w5vFksOYwqfDmeKApiDDmMKnw5jCsiBCYWxlOlxue21zZ190ZXh0fSIpCiAgICAgICAgCiAgICBleGNlcHQgRXhjZXB0aW9uIGFzIGU6CiAgICAgICAgcHJpbnQoIkJhbGUgd2ViaG9vayBlcnJvcjogIiArIHN0cihlKSkKICAgIAogICAgcmV0dXJuIGpzb25pZnkoeydvayc6IFRydWV9KQ
+from flask import jsonify
+import requests
+import os
+
+TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
+BALE_TOKEN = os.getenv('BALE_TOKEN')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+
+def send_to_telegram(file_content, file_name, file_type, text):
+    data = {'chat_id': TELEGRAM_CHAT_ID}
+    if text:
+        data['caption'] = text
+    
+    try:
+        if file_type == "photo":
+            files = {'photo': (file_name, file_content)}
+            r = requests.post(
+                f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendPhoto",
+                data=data,
+                files=files
+            )
+        # ... بقیه مدیا مثل بالا
+        else:
+            files = {'document': (file_name, file_content)}
+            r = requests.post(
+                f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument",
+                data=data,
+                files=files
+            )
+        return r
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+
+def handle_bale_message(request):
+    try:
+        data = request.get_json()
+        
+        if 'message' in data:
+            msg = data['message']
+            text = msg.get('text', '')
+            chat_id = msg['c…
