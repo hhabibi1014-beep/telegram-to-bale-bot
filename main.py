@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 import telebot
 import requests
+import io
 import os
 
 app = Flask(__name__)
@@ -21,58 +22,63 @@ def webhook():
         print(f"Error: {e}")
     return jsonify({'ok': True})
 
-@app.route('/test-bale', methods=['GET'])
-def test_bale():
-    try:
-        r = requests.post(
-            f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendMessage",
-            json={'chat_id': BALE_CHAT_ID, 'text': 'تست از سرور!'}
-        )
-        return jsonify({'status': r.status_code, 'response': r.text})
-    except Exception as e:
-        return jsonify({'error': str(e)})
-
 @telegram_bot.message_handler(content_types=['photo', 'document', 'audio', 'video'])
 def handle_media(message):
     try:
         file_id = None
-        file_name = None
-        file_content = None
+        file_type = None
+        file_name = "file"
         
         if message.photo:
             file_id = message.photo[-1].file_id
-            file_name = "photo.jpg"
-            file_content = telegram_bot.download_file(telegram_bot.get_file(file_id).file_path)
+            file_type = "photo"
         elif message.document:
             file_id = message.document.file_id
+            file_type = "document"
             file_name = message.document.file_name or "file"
-            file_content = telegram_bot.download_file(telegram_bot.get_file(file_id).file_path)
         elif message.audio:
             file_id = message.audio.file_id
+            file_type = "document"
             file_name = message.audio.file_name or "audio.mp3"
-            file_content = telegram_bot.download_file(telegram_bot.get_file(file_id).file_path)
         elif message.video:
             file_id = message.video.file_id
-            file_name = "video.mp4"
-            file_content = telegram_bot.download_file(telegram_bot.get_file(file_id).file_path)
+            file_type = "video"
         
-        if file_content:
+        if file_id:
+            # دانلود فایل از تلگرام
+            file_info = telegram_bot.get_file(file_id)
+            downloaded_file = telegram_bot.download_file(file_info.file_path)
+            
             # ارسال پیام متنی
+            text = message.caption or message.text or ""
             requests.post(
                 f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendMessage",
-                json={'chat_id': BALE_CHAT_ID, 'text': f'پیام از تلگرام:\n{message.text or ""}'}
+                json={'chat_id': BALE_CHAT_ID, 'text': f'پیام از تلگرام:\n{text}'}
             )
             
-            # ارسال فایل
-            files = {'file': (file_name, file_content)}
-            r = requests.post(
-                f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendDocument",
-                json={'chat_id': BALE_CHAT_ID},
-                files=files
-            )
+            # ارسال فایل به Bale با روش درست
+            files = {'file': (file_name, downloaded_file)}
+            data = {'chat_id': BALE_CHAT_ID}
+            
+            if file_type == "photo":
+                r = requests.post(
+                    f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendPhoto",
+                    data=data,
+                    files=files
+                )
+            else:
+                r = requests.post(
+                    f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendDocument",
+                    data=data,
+                    files=files
+                )
+            
             print(f"Bale response: {r.status_code} - {r.text}")
             
-            telegram_bot.reply_to(message, "✅ فایل به Bale ارسال شد!")
+            if r.status_code == 200:
+                telegram_bot.reply_to(message, "✅ فایل به Bale ارسال شد!")
+            else:
+                telegram_bot.reply_to(message, f"❌ خطا: {r.text}")
     except Exception as e:
         print(f"Error: {e}")
         telegram_bot.reply_to(message, f"❌ خطا: {e}")
