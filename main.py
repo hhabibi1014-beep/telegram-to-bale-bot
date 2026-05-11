@@ -48,6 +48,8 @@ def handle_media(message):
             # دانلود فایل از تلگرام
             file_info = telegram_bot.get_file(file_id)
             downloaded_file = telegram_bot.download_file(file_info.file_path)
+            file_obj = io.BytesIO(downloaded_file)
+            file_obj.name = file_name
             
             # ارسال پیام متنی
             text = message.caption or message.text or ""
@@ -56,20 +58,19 @@ def handle_media(message):
                 json={'chat_id': BALE_CHAT_ID, 'text': f'پیام از تلگرام:\n{text}'}
             )
             
-            # ارسال فایل به Bale با روش درست
-            files = {'file': (file_name, downloaded_file)}
-            data = {'chat_id': BALE_CHAT_ID}
+            # ارسال فایل به Bale
+            files = {'file': (file_name, file_obj)}
             
             if file_type == "photo":
                 r = requests.post(
                     f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendPhoto",
-                    data=data,
+                    data={'chat_id': BALE_CHAT_ID},
                     files=files
                 )
             else:
                 r = requests.post(
                     f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendDocument",
-                    data=data,
+                    data={'chat_id': BALE_CHAT_ID},
                     files=files
                 )
             
