@@ -3,7 +3,7 @@ import os
 from telegram_to_bale import handle_telegram_message
 from bale_to_telegram import handle_bale_message
 
-app = Flask(__name__)
+app = Flask(__name__)  # ← درست: __name__
 
 @app.route('/telegram_webhook', methods=['POST'])
 def telegram_webhook():
@@ -15,5 +15,5 @@ def bale_webhook():
     """دریافت پیام از بله و ارسال به تلگرام"""
     return handle_bale_message(request)
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # ← درست: __main__
     app.run(host='0.0.0.0', port=5000)
