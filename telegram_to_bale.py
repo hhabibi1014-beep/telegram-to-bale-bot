@@ -1,14 +1,10 @@
 from flask import request, jsonify
-import telebot
 import requests
 import os
 
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 BALE_TOKEN = os.getenv('BALE_TOKEN')
 BALE_CHAT_ID = os.getenv('BALE_CHAT_ID')
-
-telegram_bot = telebot.TeleBot(TELEGRAM_TOKEN)
-
 def send_to_bale(file_content, file_name, file_type, text):
     data = {'chat_id': BALE_CHAT_ID}
     if text:
@@ -47,15 +43,58 @@ def send_to_bale(file_content, file_name, file_type, text):
     except Exception as e:
         print(f"Error: {e}")
         return None
-
-@telegram_bot.message_handler(content_types=['photo', 'document', 'audio', 'video', 'voice'])
-def handle_media(message):
-    # ... همون کد قبلی تو
-
-def handle_telegram_message(request):
+def handle_telegram_message(req):
     try:
-        update = telebot.types.Update.de_json(request.stream.read().decode('utf-8'))
-        telegram_bot.process_new_updates([update])
+        data = req.get_json()
+        
+        if 'message' in data:
+            msg = data['message']
+            text = msg.get('text', '')
+            
+            if 'photo' in msg:
+                file_id = msg['photo'][-1]['file_id']
+                file_info = requests.get(
+                    f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getFile?file_id={file_id}"
+                ).json()
+                file_path = file_info['result']['file_path']
+                file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file_path}"
+                file_content = requests.get(file_url).content
+                caption = msg.get('caption', '')
+                r = send_to_bale(file_content, "photo.jpg", "photo", caption)
+                print(f"Bale response: {r.status_code if r else 'None'}")
+            
+            elif 'video' in msg:
+                file_id = msg['video']['file_id']
+                file_info = requests.get(
+                    f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getFile?file_id={file_id}"
+                ).json()
+                file_path = file_info['result']['file_path']
+                file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file_path}"
+                file_content = requests.get(file_url).content
+                caption = msg.get('caption', '')
+                r = send_to_bale(file_content, "video.mp4", "video", caption)
+                print(f"Bale response: {r.status_code if r else 'None'}")
+                            elif 'document' in msg:
+                file_id = msg['document']['file_id']
+                file_name = msg['document'].get('file_name', 'file')
+                file_info = requests.get(
+                    f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getFile?file_id={file_id}"
+                ).json()
+                file_path = file_info['result']['file_path']
+                file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file_path}"
+                file_content = requests.get(file_url).content
+                caption = msg.get('caption', '')
+                r = send_to_bale(file_content, file_name, "document", caption)
+                print(f"Bale response: {r.status_code if r else 'None'}")
+            
+            elif text:
+                r = requests.post(
+                    f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendMessage",
+                    json={'chat_id': BALE_CHAT_ID, 'text': text}
+                )
+                print(f"Bale response: {r.status_code if r else 'None'}")
+                
     except Exception as e:
         print(f"Error: {e}")
+    
     return jsonify({'ok': True})
