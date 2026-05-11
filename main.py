@@ -37,31 +37,43 @@ def handle_media(message):
             file_name = message.document.file_name or "file"
         elif message.audio:
             file_id = message.audio.file_id
-            file_type = "document"
+            file_type = "audio"
             file_name = message.audio.file_name or "audio.mp3"
         elif message.video:
             file_id = message.video.file_id
             file_type = "video"
+            file_name = message.video.file_name or "video.mp4"
         
         if file_id:
-            # متن رو به عنوان caption می‌گیریم
             text = message.caption or message.text or ""
             
-            # دریافت لینک فایل از تلگرام
             file_info = telegram_bot.get_file(file_id)
             file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file_info.file_path}"
             file_content = requests.get(file_url).content
             
-            # آماده‌سازی دیتا با caption
             data = {'chat_id': BALE_CHAT_ID}
             if text:
                 data['caption'] = text
             
-            # ارسال فایل به Bale
+            # ارسال بر اساس نوع فایل
             if file_type == "photo":
                 files = {'photo': (file_name, file_content)}
                 r = requests.post(
                     f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendPhoto",
+                    data=data,
+                    files=files
+                )
+            elif file_type == "video":
+                files = {'video': (file_name, file_content)}
+                r = requests.post(
+                    f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendVideo",
+                    data=data,
+                    files=files
+                )
+            elif file_type == "audio":
+                files = {'audio': (file_name, file_content)}
+                r = requests.post(
+                    f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendAudio",
                     data=data,
                     files=files
                 )
