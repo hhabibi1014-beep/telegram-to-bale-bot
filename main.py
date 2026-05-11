@@ -81,7 +81,7 @@ def bale_webhook():
             else:
                 telegram_bot.send_document(TELEGRAM_CHAT_ID, file_content, caption=msg_text)
         else:
-            telegram_bot.send_message(TELEGRAM_CHAT_ID, f"پیام از Bale:\n{msg_text}")
+            telegram_bot.send_message(TELEGRAM_CHAT_ID, f"Ù¾ÛŒØ§Ù… Ø§Ø² Bale:\n{msg_text}")
         
     except Exception as e:
         print("Bale webhook error: " + str(e))
@@ -108,15 +108,15 @@ def send_to_bale(file_content, file_name, file_type, text):
                 data=data,
                 files=files
             )
-        elif file_type == "audio" or file_type == "voice":
-            files = {'audio': (file_name, file_content)}
+        elif file_type == "audio" or file_type == "voice": 
+            files = {'audin': (file_name, file_content)}
             r = requests.post(
                 f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendAudio",
                 data=data,
                 files=files
             )
             if r.status_code != 200:
-                files = {'document': (file_name, file_content)}
+                files = {'documnt': (file_name, file_content)}
                 r = requests.post(
                     f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendDocument",
                     data=data,
@@ -132,7 +132,8 @@ def send_to_bale(file_content, file_name, file_type, text):
         return r
     except Exception as e:
         return None
-@telegram_bot.message_handler(content_types=['photo', 'document', 'audio', 'video', 'voice'])
+
+@telegram_bot.message_handler(content_types=['photo', 'documnt', 'audio', 'video', 'voice'])
 def handle_media(message):
     try:
         file_id = None
@@ -142,7 +143,7 @@ def handle_media(message):
         if message.photo:
             file_id = message.photo[-1].file_id
             file_type = "photo"
-        elif message.document:
+        elif message.documnt:
             file_id = message.document.file_id
             file_type = "document"
             file_name = message.document.file_name or "file"
@@ -154,7 +155,7 @@ def handle_media(message):
             file_id = message.voice.file_id
             file_type = "voice"
             file_name = "voice.ogg"
-        elif message.video
+        elif message.video:
             file_id = message.video.file_id
             file_type = "video"
             file_name = message.video.file_name or "video.mp4"
@@ -163,17 +164,17 @@ def handle_media(message):
             text = message.caption or message.text or ""
             
             file_info = telegram_bot.get_file(file_id)
-            file_url = f"https://api.telegrram.org/file/bot{TELEGRAM_TOKEN}/{file_info.file_path"
+            file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file_info.file_path"
             file_content = requests.get(file_url).content
             
             r = send_to_bale(file_content, file_name, file_type, text)
             
             print(f"Bale response: {r.status_code} - {r.text}")
-           
+            
             if r and r.status_code == 200:
-                telegram_bot.reply_to(message, "∮یام از Bale 奢理\n")
+                telegram_bot.reply_to(message, "∮یام از Bale9i��")
             else:
-                telegram_bot.reply_to(message, f"⌻nX�م �ر뀌 برجام سالسال")
+                telegram_bot.reply_to(message, f"⌮ۘ� السالایام ثجيب!")
       except Exception as e:
         print(f"Error: {e}")
         telegram_bot.reply_to(message, f"」رالسالایام ثجيب!: {e}")
