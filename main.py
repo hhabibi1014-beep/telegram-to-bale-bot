@@ -44,26 +44,33 @@ def handle_media(message):
             file_type = "video"
         
         if file_id:
-            # ارسال پیام متنی
+            # متن رو به عنوان caption می‌گیریم
             text = message.caption or message.text or ""
-            requests.post(
-                f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendMessage",
-                json={'chat_id': BALE_CHAT_ID, 'text': f'پیام از تلگرام:\n{text}'}
-            )
             
             # دریافت لینک فایل از تلگرام
             file_info = telegram_bot.get_file(file_id)
             file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file_info.file_path}"
+            file_content = requests.get(file_url).content
             
-            # ارسال فایل به Bale با Form Data
-            files = {'document': (file_name, requests.get(file_url).content)}
+            # ارسال فایل به Bale با caption
+            files = {'document': (file_name, file_content)}
             data = {'chat_id': BALE_CHAT_ID}
             
-            r = requests.post(
-                f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendDocument",
-                data=data,
-                files=files
-            )
+            if file_type == "photo":
+                # برای عکس از sendPhoto استفاده می‌کنیم
+                files = {'photo': (file_name, file_content)}
+                r = requests.post(
+                    f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendPhoto",
+                    data=data,
+                    files=files
+                )
+            else:
+                # برای بقیه فایل‌ها
+                r = requests.post(
+                    f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendDocument",
+                    data=data,
+                    files=files
+                )
             
             print(f"Bale response: {r.status_code} - {r.text}")
             
