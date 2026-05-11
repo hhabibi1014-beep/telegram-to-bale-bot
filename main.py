@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 import telebot
 import requests
-import io
 import os
 
 app = Flask(__name__)
@@ -45,12 +44,6 @@ def handle_media(message):
             file_type = "video"
         
         if file_id:
-            # دانلود فایل از تلگرام
-            file_info = telegram_bot.get_file(file_id)
-            downloaded_file = telegram_bot.download_file(file_info.file_path)
-            file_obj = io.BytesIO(downloaded_file)
-            file_obj.name = file_name
-            
             # ارسال پیام متنی
             text = message.caption or message.text or ""
             requests.post(
@@ -58,21 +51,19 @@ def handle_media(message):
                 json={'chat_id': BALE_CHAT_ID, 'text': f'پیام از تلگرام:\n{text}'}
             )
             
-            # ارسال فایل به Bale
-            files = {'file': (file_name, file_obj)}
+            # دریافت لینک فایل از تلگرام
+            file_info = telegram_bot.get_file(file_id)
+            file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file_info.file_path}"
             
-            if file_type == "photo":
-                r = requests.post(
-                    f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendPhoto",
-                    data={'chat_id': BALE_CHAT_ID},
-                    files=files
-                )
-            else:
-                r = requests.post(
-                    f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendDocument",
-                    data={'chat_id': BALE_CHAT_ID},
-                    files=files
-                )
+            # ارسال فایل به Bale با Form Data
+            files = {'document': (file_name, requests.get(file_url).content)}
+            data = {'chat_id': BALE_CHAT_ID}
+            
+            r = requests.post(
+                f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendDocument",
+                data=data,
+                files=files
+            )
             
             print(f"Bale response: {r.status_code} - {r.text}")
             
