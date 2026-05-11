@@ -21,7 +21,6 @@ def webhook():
         print(f"Error: {e}")
     return jsonify({'ok': True})
 
-# تست بله
 @app.route('/test-bale', methods=['GET'])
 def test_bale():
     try:
@@ -38,37 +37,40 @@ def handle_media(message):
     try:
         file_id = None
         file_name = None
+        file_content = None
         
         if message.photo:
             file_id = message.photo[-1].file_id
             file_name = "photo.jpg"
+            file_content = telegram_bot.download_file(telegram_bot.get_file(file_id).file_path)
         elif message.document:
             file_id = message.document.file_id
             file_name = message.document.file_name or "file"
+            file_content = telegram_bot.download_file(telegram_bot.get_file(file_id).file_path)
         elif message.audio:
             file_id = message.audio.file_id
-            file_name = message.audio.file_name or "audio"
+            file_name = message.audio.file_name or "audio.mp3"
+            file_content = telegram_bot.download_file(telegram_bot.get_file(file_id).file_path)
         elif message.video:
             file_id = message.video.file_id
             file_name = "video.mp4"
+            file_content = telegram_bot.download_file(telegram_bot.get_file(file_id).file_path)
         
-        if file_id:
-            file_info = telegram_bot.get_file(file_id)
-            file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file_info.file_path}"
-            
-            response = requests.get(file_url)
-            
+        if file_content:
+            # ارسال پیام متنی
             requests.post(
                 f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendMessage",
                 json={'chat_id': BALE_CHAT_ID, 'text': f'پیام از تلگرام:\n{message.text or ""}'}
             )
             
-            files = {'file': (file_name, response.content)}
-            requests.post(
+            # ارسال فایل
+            files = {'file': (file_name, file_content)}
+            r = requests.post(
                 f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendDocument",
                 json={'chat_id': BALE_CHAT_ID},
                 files=files
             )
+            print(f"Bale response: {r.status_code} - {r.text}")
             
             telegram_bot.reply_to(message, "✅ فایل به Bale ارسال شد!")
     except Exception as e:
