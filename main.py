@@ -113,4 +113,4 @@ def handle_media(message):
         telegram_bot.reply_to(message, f"❌ خطا: {e}")
 
 if __name__ == '__main__':
-    app.run(host…
+    app.run(host='0.0.0.0', port=5000)
