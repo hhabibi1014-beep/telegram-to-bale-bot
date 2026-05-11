@@ -1,1 +1,1 @@
-d2ViOiBweXRob24gbWFpbi5weQ
+web: python main.py
