@@ -5,18 +5,18 @@ import os
 
 app = Flask(__name__)
 
-TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
-BALE_TOKEN = os.getenv('BALE_TOKEN')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-BALE_CHAT_ID = os.getenv('BALE_CHAT_ID')
+TELEGRAM_TOKEN = os. getenv('TELEGRAM_TOKEN')
+BALE_TOKEN = os. getenv('BALE_TOKEN')
+TELEGRAM_CHAT_ID = os. getenv('TELEGRAM_CHAT_ID')
+BALE_CHAT_ID = os. getenv('BALE_CHAT_ID')
 
-telegram_bot = telebot.TeleBot(TELEGRAM_TOKEN)
+telegram_bot = telebot. TeleBot(TELEGRAM_TOKEN)
 
-@app.route('/webhook', methods=['POST'])
+@app. route('/webhook', methods=['POST'])
 def webhook():
     try:
-        update = telebot.types.Update.de_json(request.stream.read().decode('utf-8'))
-        telegram_bot.process_new_updates([update])
+        update = telebot. types. Update. de_json(request. stream. read(). decode('utf-8'))
+        telegram_bot. process_new_updates([update])
     except Exception as e:
         print(f"Error: {e}")
     return jsonify({'ok': True})
@@ -29,36 +29,36 @@ def send_to_bale(file_content, file_name, file_type, text):
     try:
         if file_type == "photo":
             files = {'photo': (file_name, file_content)}
-            r = requests.post(
-                f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendPhoto",
+            r = requests. post(
+                f"https://tapi. bale. ai/bot{BALE_TOKEN}/sendPhoto",
                 data=data,
                 files=files
             )
         elif file_type == "video":
             files = {'video': (file_name, file_content)}
-            r = requests.post(
-                f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendVideo",
+            r = requests. post(
+                f"https://tapi. bale. ai/bot{BALE_TOKEN}/sendVideo",
                 data=data,
                 files=files
             )
         elif file_type == "audio" or file_type == "voice":
             files = {'audio': (file_name, file_content)}
-            r = requests.post(
-                f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendAudio",
+            r = requests. post(
+                f"https://tapi. bale. ai/bot{BALE_TOKEN}/sendAudio",
                 data=data,
                 files=files
             )
-            if r.status_code != 200:
+            if r. status_code != 200:
                 files = {'document': (file_name, file_content)}
-                r = requests.post(
-                    f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendDocument",
+                r = requests. post(
+                    f"https://tapi. bale. ai/bot{BALE_TOKEN}/sendDocument",
                     data=data,
                     files=files
                 )
         else:
             files = {'document': (file_name, file_content)}
-            r = requests.post(
-                f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendDocument",
+            r = requests. post(
+                f"https://tapi. bale. ai/bot{BALE_TOKEN}/sendDocument",
                 data=data,
                 files=files
             )
@@ -102,7 +102,6 @@ def handle_media(message):
             
             r = send_to_bale(file_content, file_name, file_type, text)
             
-            # محاسبه حجم فایل
             file_size = len(file_content)
             if file_size < 1024:
                 size_str = f"{file_size} B"
@@ -111,15 +110,31 @@ def handle_media(message):
             else:
                 size_str = f"{file_size/(1024*1024):.1f} MB"
             
-            print(f"Bale response: {r.status_code} - {r.text}")
-
-                        if r and r.status_code == 200:
+            if r and r.status_code == 200:
                 telegram_bot.reply_to(message, f"✅ فایل به Bale ارسال شد!\n📁 حجم: {size_str}")
             else:
                 error_msg = r.text if r else "خطای ناشناخته"
                 telegram_bot.reply_to(message, f"❌ خطا: {error_msg}\n📁 حجم: {size_str}")
+    except Exception as e:
+        print(f"Error: {e}")
+        telegram_bot.reply_to(message, f"❌ خطا: {e}")
 
-except Exception as e:
+@telegram_bot.message_handler(content_types=['text'])
+def handle_text(message):
+    try:
+        text = message.text
+        if text:
+            data = {'chat_id': BALE_CHAT_ID, 'text': f"پیام از تلگرام:\n{text}"}
+            r = requests.post(
+                f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendMessage",
+                data=data
+            )
+            
+            if r and r.status_code == 200:
+                telegram_bot.reply_to(message, "✅ پیام به Bale ارسال شد!")
+            else:
+                telegram_bot.reply_to(message, f"❌ خطا: {r.text}")
+    except Exception as e:
         print(f"Error: {e}")
         telegram_bot.reply_to(message, f"❌ خطا: {e}")
 
