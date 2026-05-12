@@ -8,7 +8,7 @@ app = Flask(__name__)
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 telegram_bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
-# تابع تبدیل حجم فایل به فرمت خوانا
+# تابع تبدیل حجم به فرمت خوانا
 def get_size_format(b, factor=1024, suffix="B"):
     for unit in ["", "K", "M", "G"]:
         if b < factor:
@@ -24,7 +24,6 @@ def webhook():
         return ''
     return jsonify({'ok': False}), 403
 
-# مدیریت پیام‌های متنی
 @telegram_bot.message_handler(content_types=['text'])
 def handle_text(message):
     r = send_to_bale(None, None, "text", message.text)
@@ -33,44 +32,58 @@ def handle_text(message):
     else:
         telegram_bot.reply_to(message, "❌ خطا در ارسال متن به بله")
 
-# مدیریت انواع فایل و رسانه
 @telegram_bot.message_handler(content_types=['photo', 'document', 'audio', 'video', 'voice'])
 def handle_media(message):
+    size_str = "نامشخص"
     try:
         file_id = None
         file_name = "file"
         file_type = "document"
+        raw_size = 0
 
-        # تشخیص نوع رسانه
+        # ۱. استخراج اطلاعات و حجم فایل قبل از دانلود
         if message.photo:
             file_id = message.photo[-1].file_id
+            raw_size = message.photo[-1].file_size
             file_type = "photo"
             file_name = "image.jpg"
         elif message.document:
             file_id = message.document.file_id
+            raw_size = message.document.file_size
             file_name = message.document.file_name
         elif message.video:
             file_id = message.video.file_id
+            raw_size = message.video.file_size
             file_type = "video"
             file_name = "video.mp4"
-        elif message.audio or message.voice:
-            file_id = (message.audio or message.voice).file_id
+        elif message.audio:
+            file_id = message.audio.file_id
+            raw_size = message.audio.file_size
             file_type = "audio"
-            file_name = "audio.mp3" if message.audio else "voice.ogg"
+            file_name = message.audio.file_name or "audio.mp3"
+        elif message.voice:
+            file_id = message.voice.file_id
+            raw_size = message.voice.file_size
+            file_type = "audio"
+            file_name = "voice.ogg"
+
+        # تبدیل حجم به متن (مثلا ۲۵ مگابایت)
+        if raw_size > 0:
+            size_str = get_size_format(raw_size)
+
+        # ۲. بررسی محدودیت ۲۰ مگابایت قبل از تلاش برای دانلود
+        if raw_size > 20 * 1024 * 1024:
+            telegram_bot.reply_to(message, f"⚠️ حجم فایل ({size_str}) از حد مجاز تلگرام (۲۰ مگابایت) بزرگ‌تر است و امکان انتقال آن وجود ندارد.")
+            return
 
         if file_id:
-            # تلاش برای گرفتن اطلاعات فایل از تلگرام
+            # ۳. دانلود و ارسال (فقط برای فایل‌های مجاز)
             file_info = telegram_bot.get_file(file_id)
             file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file_info.file_path}"
-            
-            # دانلود فایل
             response = requests.get(file_url)
             file_content = response.content
             
-            # محاسبه حجم و ارسال
-            size_str = get_size_format(len(file_content))
             caption = message.caption or ""
-            
             r = send_to_bale(file_content, file_name, file_type, caption)
             
             if r and r.status_code == 200:
@@ -80,9 +93,8 @@ def handle_media(message):
                 
     except Exception as e:
         error_text = str(e)
-        # نمایش پیام فارسی برای فایل‌های حجیم
         if "file is too big" in error_text:
-            telegram_bot.reply_to(message, "⚠️ این فایل از حد مجاز تلگرام (۲۰ مگابایت) بزرگ‌تر است و امکان انتقال آن وجود ندارد.")
+            telegram_bot.reply_to(message, f"⚠️ حجم فایل ({size_str}) از حد مجاز تلگرام بزرگ‌تر است.")
         else:
             telegram_bot.reply_to(message, f"❌ خطای سیستم: {error_text}")
 
