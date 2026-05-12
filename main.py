@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 import telebot
-from telegram_to_bale import telegram_robot
+from telegram_to_bale import telegram_bot
 
 app = Flask(__name__)
 
