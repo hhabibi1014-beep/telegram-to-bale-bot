@@ -1,20 +1,13 @@
 import requests
-import os
 
-# خواندن تنظیمات از ری‌لوی
-BALE_TOKEN = os.getenv('BALE_TOKEN')
-BALE_CHAT_ID = os.getenv('BALE_CHAT_ID')
-
-def send_to_bale(file_content, file_name, file_type, text):
-    base_url = f"https://tapi.bale.ai/bot{BALE_TOKEN}"
-    data = {'chat_id': BALE_CHAT_ID}
+def send_to_bale(file_content, file_name, file_type, text, token, chat_id):
+    base_url = f"https://tapi.bale.ai/bot{token}"
+    data = {'chat_id': chat_id}
     
     try:
-        # اگر پیام فقط متن ساده باشد
         if file_type == "text":
-            return requests.post(f"{base_url}/sendMessage", data={'chat_id': BALE_CHAT_ID, 'text': text})
+            return requests.post(f"{base_url}/sendMessage", data={'chat_id': chat_id, 'text': text})
 
-        # اگر پیام شامل فایل باشد
         if text:
             data['caption'] = text
             
@@ -31,7 +24,6 @@ def send_to_bale(file_content, file_name, file_type, text):
             endpoint = f"{base_url}/sendDocument"
             files = {'document': (file_name, file_content)}
 
-        r = requests.post(endpoint, data=data, files=files)
-        return r
+        return requests.post(endpoint, data=data, files=files)
     except:
         return None
