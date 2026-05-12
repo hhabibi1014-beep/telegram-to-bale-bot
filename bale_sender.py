@@ -1,19 +1,22 @@
 import requests
 import os
 
-# خواندن اطلاعات حساس از تنظیمات ریپلوی
 BALE_TOKEN = os.getenv('BALE_TOKEN')
 BALE_CHAT_ID = os.getenv('BALE_CHAT_ID')
 
 def send_to_bale(file_content, file_name, file_type, text):
-    data = {'chat_id': BALE_CHAT_ID}
-    if text:
-        data['caption'] = text
-    
     base_url = f"https://tapi.bale.ai/bot{BALE_TOKEN}"
+    data = {'chat_id': BALE_CHAT_ID}
     
     try:
-        # تشخیص نوع فایل و فرستادن به آدرس درست در بله
+        # اگر فقط متن بود و فایلی در کار نبود
+        if file_type == "text":
+            return requests.post(f"{base_url}/sendMessage", data={'chat_id': BALE_CHAT_ID, 'text': text})
+
+        # برای بقیه موارد (عکس، فیلم، صدا، فایل)
+        if text:
+            data['caption'] = text
+            
         if file_type == "photo":
             endpoint = f"{base_url}/sendPhoto"
             files = {'photo': (file_name, file_content)}
