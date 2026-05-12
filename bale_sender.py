@@ -1,6 +1,7 @@
 import requests
 import os
 
+# خواندن تنظیمات از ری‌لوی
 BALE_TOKEN = os.getenv('BALE_TOKEN')
 BALE_CHAT_ID = os.getenv('BALE_CHAT_ID')
 
@@ -9,11 +10,11 @@ def send_to_bale(file_content, file_name, file_type, text):
     data = {'chat_id': BALE_CHAT_ID}
     
     try:
-        # اگر فقط متن بود و فایلی در کار نبود
+        # اگر پیام فقط متن ساده باشد
         if file_type == "text":
             return requests.post(f"{base_url}/sendMessage", data={'chat_id': BALE_CHAT_ID, 'text': text})
 
-        # برای بقیه موارد (عکس، فیلم، صدا، فایل)
+        # اگر پیام شامل فایل باشد
         if text:
             data['caption'] = text
             
