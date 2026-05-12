@@ -112,5 +112,26 @@ def handle_media(message):
         print(f"Error: {e}")
         telegram_bot.reply_to(message, f"❌ خطا: {e}")
 
+@telegram_bot.message_handler(content_types=['text'])
+def handle_text(message):
+    try:
+        text = message.text
+        if text:
+            # ارسال متن به بله
+            data = {'chat_id': BALE_CHAT_ID, 'text': f"پیام از تلگرام:\n{text}"}
+            r = requests.post(
+                f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendMessage",
+                data=data
+            )
+            
+            if r and r.status_code == 200:
+                telegram_bot.reply_to(message, "Forwarded to Bale")
+            else:
+                telegram_bot.reply_to(message, f"Failed: {r.text}")
+    except Exception as e:
+        print(f"Error: {e}")
+        telegram_bot.reply_to(message, f"Error: {e}")
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
