@@ -112,12 +112,14 @@ def handle_media(message):
                 size_str = f"{file_size/(1024*1024):.1f} MB"
             
             print(f"Bale response: {r.status_code} - {r.text}")
-            
-            if r and r.status_code == 200:
+
+                        if r and r.status_code == 200:
                 telegram_bot.reply_to(message, f"✅ فایل به Bale ارسال شد!\n📁 حجم: {size_str}")
             else:
-                telegram_bot.reply_to(message, f"❌ خطا: {r.text if r else 'خطای ناشناخته'}")
-    except Exception as e:
+                error_msg = r.text if r else "خطای ناشناخته"
+                telegram_bot.reply_to(message, f"❌ خطا: {error_msg}\n📁 حجم: {size_str}")
+
+except Exception as e:
         print(f"Error: {e}")
         telegram_bot.reply_to(message, f"❌ خطا: {e}")
 
