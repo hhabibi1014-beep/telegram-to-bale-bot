@@ -97,12 +97,18 @@ def handle_media(message):
             text = message.caption or message.text or ""
             
             file_info = telegram_bot.get_file(file_id)
+            file_size = file_info.file_size
+            
+            # چک کردن حجم فایل (محدودیت: 20MB)
+            if file_size > 20 * 1024 * 1024:
+                telegram_bot.reply_to(message, f"❌ فایل خیلی بزرگه! حداکثر حجم: 20MB\n📁 حجم فایل: {file_size/(1024*1024):.1f} MB")
+                return
+            
             file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file_info.file_path}"
             file_content = requests.get(file_url).content
             
             r = send_to_bale(file_content, file_name, file_type, text)
             
-            file_size = len(file_content)
             if file_size < 1024:
                 size_str = f"{file_size} B"
             elif file_size < 1024*1024:
@@ -137,6 +143,7 @@ def handle_text(message):
     except Exception as e:
         print(f"Error: {e}")
         telegram_bot.reply_to(message, f"❌ خطا: {e}")
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
