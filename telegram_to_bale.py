@@ -13,8 +13,7 @@ def handle_start(message):
 def handle_message(message):
     text = message.text
     
-    # Send to Bale
-    url = f"https://api.robots.bale.ai/v1/robots/{BALE_BOT_TOKEN}/sendMessage"
+    url = f"https://api.bale.ai/v1/bots/{BALE_BOT_TOKEN}/sendMessage"
     data = {"chat_id": BALE_CHAT_ID, "text": text}
     
     try:
