@@ -1,7 +1,5 @@
 import os
 
-TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
-BALE_BOT_TOKEN = os.environ.get('BALE_BOT_TOKEN')
-
-# آیدی ثابت Bale برای ارسال پیام
-BALE_CHAT_ID = "your_bale_chat_id_here"
+TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_TOKEN')
+BALE_BOT_TOKEN = os.environ.get('BALE_TOKEN')
+BALE_CHAT_ID = os.environ.get('BALE_CHAT_ID')
