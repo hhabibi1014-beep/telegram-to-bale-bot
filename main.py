@@ -69,6 +69,9 @@ def send_to_bale(file_content, file_name, file_type, text):
 @telegram_bot.message_handler(content_types=['photo', 'document', 'audio', 'video', 'voice'])
 def handle_media(message):
     try:
+        print(f"=== MEDIA HANDLER START ===")
+        print(f"Message type: {message.content_type}")
+        
         file_id = None
         file_type = None
         file_name = "file"
@@ -76,38 +79,50 @@ def handle_media(message):
         if message.photo:
             file_id = message.photo[-1].file_id
             file_type = "photo"
+            print("Type: photo")
         elif message.document:
             file_id = message.document.file_id
             file_type = "document"
             file_name = message.document.file_name or "file"
+            print(f"Type: document, name: {file_name}")
         elif message.audio:
             file_id = message.audio.file_id
             file_type = "audio"
             file_name = message.audio.file_name or "audio.mp3"
+            print("Type: audio")
         elif message.voice:
             file_id = message.voice.file_id
             file_type = "voice"
             file_name = "voice.ogg"
+            print("Type: voice")
         elif message.video:
             file_id = message.video.file_id
             file_type = "video"
             file_name = message.video.file_name or "video.mp4"
+            print("Type: video")
         
         if file_id:
+            print(f"File ID: {file_id}")
+            
             text = message.caption or message.text or ""
+            print(f"Caption/Text: {text}")
             
             file_info = telegram_bot.get_file(file_id)
             file_size = file_info.file_size
+            print(f"File size from Telegram: {file_size} bytes")
             
-            # چک کردن حجم فایل (محدودیت: 20MB)
             if file_size > 20 * 1024 * 1024:
                 telegram_bot.reply_to(message, f"❌ فایل خیلی بزرگه! حداکثر حجم: 20MB\n📁 حجم فایل: {file_size/(1024*1024):.1f} MB")
                 return
             
             file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{file_info.file_path}"
+            print(f"Downloading from: {file_url}")
             file_content = requests.get(file_url).content
+            print(f"Downloaded size: {len(file_content)} bytes")
             
+            print(f"Sending to Bale: chat_id={BALE_CHAT_ID}, type={file_type}, name={file_name}")
             r = send_to_bale(file_content, file_name, file_type, text)
+            print(f"Bale response: {r}")
             
             if file_size < 1024:
                 size_str = f"{file_size} B"
@@ -120,30 +135,16 @@ def handle_media(message):
                 telegram_bot.reply_to(message, f"✅ فایل به Bale ارسال شد!\n📁 حجم: {size_str}")
             else:
                 error_msg = r.text if r else "خطای ناشناخته"
+                print(f"ERROR: {error_msg}")
                 telegram_bot.reply_to(message, f"❌ خطا: {error_msg}\n📁 حجم: {size_str}")
+        else:
+            print("No file_id found!")
+        print(f"=== MEDIA HANDLER END ===")
     except Exception as e:
         print(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
         telegram_bot.reply_to(message, f"❌ خطا: {e}")
-
-@telegram_bot.message_handler(content_types=['text'])
-def handle_text(message):
-    try:
-        text = message.text
-        if text:
-            data = {'chat_id': BALE_CHAT_ID, 'text': f"پیام از تلگرام:\n{text}"}
-            r = requests.post(
-                f"https://tapi.bale.ai/bot{BALE_TOKEN}/sendMessage",
-                data=data
-            )
-            
-            if r and r.status_code == 200:
-                telegram_bot.reply_to(message, "✅ پیام به Bale ارسال شد!")
-            else:
-                telegram_bot.reply_to(message, f"❌ خطا: {r.text}")
-    except Exception as e:
-        print(f"Error: {e}")
-        telegram_bot.reply_to(message, f"❌ خطا: {e}")
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
