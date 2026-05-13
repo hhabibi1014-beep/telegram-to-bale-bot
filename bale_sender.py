@@ -1,29 +1,25 @@
 import requests
+import os
 
-def send_to_bale(file_content, file_name, file_type, text, token, chat_id):
-    base_url = f"https://tapi.bale.ai/bot{token}"
-    data = {'chat_id': chat_id}
-    
+BALE_TOKEN = os.getenv("BALE_TOKEN")
+BASE_URL = f"https://tapi.bale.ai/bot{BALE_TOKEN}"
+
+def send_to_bale(target_id, text=None, file_path=None, file_type=None):
     try:
-        if file_type == "text":
-            return requests.post(f"{base_url}/sendMessage", data={'chat_id': chat_id, 'text': text})
+        if not file_path:
+            response = requests.post(f"{BASE_URL}/sendMessage", 
+                                    data={'chat_id': target_id, 'text': text})
+            return response.status_code == 200
+        
+        # انتخاب متد بر اساس نوع فایل
+        method = "sendPhoto" if file_type == 'photo' else "sendDocument"
+        field = "photo" if file_type == 'photo' else "document"
 
-        if text:
-            data['caption'] = text
-            
-        if file_type == "photo":
-            endpoint = f"{base_url}/sendPhoto"
-            files = {'photo': (file_name, file_content)}
-        elif file_type == "video":
-            endpoint = f"{base_url}/sendVideo"
-            files = {'video': (file_name, file_content)}
-        elif file_type in ["audio", "voice"]:
-            endpoint = f"{base_url}/sendAudio"
-            files = {'audio': (file_name, file_content)}
-        else:
-            endpoint = f"{base_url}/sendDocument"
-            files = {'document': (file_name, file_content)}
-
-        return requests.post(endpoint, data=data, files=files)
-    except:
-        return None
+        with open(file_path, 'rb') as f:
+            response = requests.post(f"{BASE_URL}/{method}", 
+                                    data={'chat_id': target_id, 'caption': text}, 
+                                    files={field: f})
+            return response.status_code == 200
+    except Exception as e:
+        print(f"Error in bale_sender: {e}")
+        return False
