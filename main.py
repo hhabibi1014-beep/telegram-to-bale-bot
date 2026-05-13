@@ -3,68 +3,79 @@ import os
 from bale_sender import send_to_bale
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
-USER_MAPPING = {
+# لیست آیدی‌های مجاز تلگرام
+USER_LIST = [os.getenv("USER_1"), os.getenv("USER_2")]
+
+# نقشه‌برداری تلگرام به بله
+# USER_1 -> DEST_1
+# USER_2 -> DEST_2
+DEST_MAP = {
     os.getenv("USER_1"): os.getenv("DEST_1"),
     os.getenv("USER_2"): os.getenv("DEST_2")
 }
 
 bot = telebot.TeleBot(TOKEN)
 
-@bot.message_handler(content_types=['photo', 'document', 'video', 'audio', 'voice', 'video_note'])
-def handle_files(message):
-    user_id = str(message.from_user.id)
-    if user_id not in USER_MAPPING:
-        return
-
-    target_bale_id = USER_MAPPING[user_id]
+def get_file_details(message):
+    """استخراج اطلاعات فایل و حجم"""
+    file_id = None
+    file_name = "file"
+    file_size = 0
     
-    try:
-        # ۱. استخراج اطلاعات فایل بدون دانلود
-        c_type = message.content_type
-        if c_type == 'photo':
-            file_id = message.photo[-1].file_id
-            file_size = message.photo[-1].file_size
-        else:
-            file_obj = getattr(message, c_type)
-            file_id = file_obj.file_id
-            file_size = file_obj.file_size
+    if message.content_type == 'photo':
+        file_id = message.photo[-1].file_id
+        file_name = "photo.jpg"
+        file_size = message.photo[-1].file_size
+    elif message.content_type == 'video':
+        file_id = message.video.file_id
+        file_name = message.video.file_name or "video.mp4"
+        file_size = message.video.file_size
+    elif message.content_type == 'document':
+        file_id = message.document.file_id
+        file_name = message.document.file_name
+        file_size = message.document.file_size
+    elif message.content_type == 'audio':
+        file_id = message.audio.file_id
+        file_name = message.audio.file_name or "audio.mp3"
+        file_size = message.audio.file_size
+    elif message.content_type == 'voice':
+        file_id = message.voice.file_id
+        file_name = "voice.ogg"
+        file_size = message.voice.file_size
 
-        # ۲. محاسبه حجم به مگابایت
-        file_size_mb = round(file_size / (1024 * 1024), 2)
-        
-        # ۳. چک کردن محدودیت حجم (مثلاً ۵۰ مگابایت)
-        if file_size_mb > 50:
-            error_text = f"❌ عدم امکان ارسال!\n\n📁 نوع فایل: {c_type}\n📦 حجم فایل: {file_size_mb} MB\n\n⚠️ پیام: حجم فایل بیش از حد مجاز (۵۰ مگابایت) است و امکان جابجایی وجود ندارد."
-            send_to_bale(target_bale_id, text=error_text)
-            print(f"فایل سنگین رد شد: {file_size_mb} MB")
-            return
+    return file_id, file_name, file_size
 
-        # ۴. اگر حجم مجاز بود -> شروع دانلود و ارسال
-        file_info = bot.get_file(file_id)
-        downloaded_file = bot.download_file(file_info.file_path)
-        temp_filename = f"temp_{os.path.basename(file_info.file_path)}"
-        
-        with open(temp_filename, 'wb') as f:
-            f.write(downloaded_file)
-        
-        caption = (message.caption or "") + f"\n\n📦 حجم: {file_size_mb} MB"
-        success = send_to_bale(target_bale_id, text=caption, file_path=temp_filename, file_type=c_type)
-        
-        if not success:
-            send_to_bale(target_bale_id, text=f"❌ خطای فنی در آپلود فایل {file_size_mb} مگابایتی به بله.")
-
-        if os.path.exists(temp_filename):
-            os.remove(temp_filename)
-
-    except Exception as e:
-        print(f"Error: {e}")
-        send_to_bale(target_bale_id, text="⚠️ خطا در دسترسی به فایل تلگرام.")
-
-@bot.message_handler(content_types=['text'])
-def handle_text(message):
+@bot.message_handler(func=lambda m: True, content_types=['text', 'photo', 'video', 'document', 'audio', 'voice'])
+def process_messages(message):
     user_id = str(message.from_user.id)
-    if user_id in USER_MAPPING:
-        send_to_bale(USER_MAPPING[user_id], text=message.text)
+    
+    # فقط اگر پیام از یکی از دو کاربر ما باشد
+    if user_id in USER_LIST:
+        dest_id = DEST_MAP.get(user_id)
+        
+        # مدیریت متن
+        if message.content_type == 'text':
+            send_to_bale(dest_id, text=f"💬 متن:\n{message.text}")
+        
+        # مدیریت فایل‌ها
+        else:
+            file_id, f_name, f_size = get_file_details(message)
+            size_mb = round(f_size / (1024 * 1024), 2)
+            
+            # گزارش حجم به بله
+            send_to_bale(dest_id, text=f"📂 فایل: {f_name}\n⚖️ حجم: {size_mb} MB\n⏳ در حال انتقال...")
 
-print("ربات با مانیتورینگ حجم فایل (حتی فایل‌های سنگین) فعال شد...")
+            if size_mb > 20:
+                send_to_bale(dest_id, text=f"❌ خطا: حجم ({size_mb}MB) بیشتر از حد مجاز تلگرام است.")
+                return
+
+            try:
+                file_info = bot.get_file(file_id)
+                downloaded = bot.download_file(file_info.file_path)
+                send_to_bale(dest_id, file_data=downloaded, filename=f_name, caption=message.caption)
+                send_to_bale(dest_id, text="✅ ارسال شد.")
+            except Exception as e:
+                send_to_bale(dest_id, text=f"❌ خطا در پردازش: {e}")
+
+print("🚀 ربات دوکاربره فعال شد...")
 bot.infinity_polling()
