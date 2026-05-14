@@ -3,62 +3,70 @@ import os
 import google.generativeai as genai
 from telebot import types
 
+# تنظیمات
 BALE_TOKEN = os.getenv("BALE_TOKEN")
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
-ALLOWED_BALE_IDS = [os.getenv("DEST_1"), os.getenv("DEST_2")]
+# آیدی‌های مدیر (فقط تو و همسرت)
+ADMIN_IDS = [os.getenv("DEST_1"), os.getenv("DEST_2")]
 
+# راه‌اندازی Gemini
 genai.configure(api_key=GEMINI_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
+# راه‌اندازی ربات بله
 bot = telebot.TeleBot(BALE_TOKEN, threaded=False)
 bot.api_helper.API_URL = "https://tapi.bale.ai/bot{0}/{1}"
 
-# تابع کمکی برای خواندن آخرین پیام‌های ذخیره شده
-def get_history(chat_id):
-    file_name = f"history_{chat_id}.txt"
-    if not os.path.exists(file_name):
-        return []
-    with open(file_name, "r") as f:
-        return f.read().splitlines()
+def get_main_keyboard(user_id):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(types.KeyboardButton("🤖 گپ با هوش مصنوعی"))
+    # دکمه فوروارد فقط برای مدیرها ظاهر می‌شود
+    if str(user_id) in ADMIN_IDS:
+        markup.add(types.KeyboardButton("🔄 بازبینی پیام‌های شخصی (فقط مدیر)"))
+    return markup
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    if str(message.chat.id) in ALLOWED_BALE_IDS:
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        markup.add(types.KeyboardButton("🤖 گپ با هوش مصنوعی"))
-        markup.add(types.KeyboardButton("🔄 بازبینی پیام‌های اخیر"))
-        bot.send_message(message.chat.id, "خوش آمدی حسن جان. چه کمکی از دستم برمی‌آید؟", reply_markup=markup)
+    user_id = str(message.chat.id)
+    welcome_text = "سلام! من دستیار هوشمند شما هستم. چطور می‌توانم کمکتان کنم؟"
+    bot.send_message(user_id, welcome_text, reply_markup=get_main_keyboard(user_id))
 
 @bot.message_handler(func=lambda m: True)
-def handle_bale(message):
-    chat_id = str(message.chat.id)
-    if chat_id not in ALLOWED_BALE_IDS: return
+def handle_messages(message):
+    user_id = str(message.chat.id)
+    text = message.text
 
-    if message.text == "🔄 بازبینی پیام‌های اخیر":
-        history = get_history(chat_id)
-        if not history:
-            bot.reply_to(message, "هنوز پیامی در تاریخچه ذخیره نشده است.")
-            return
-        
-        bot.send_message(chat_id, "⏳ در حال بازنشر ۵ پیام آخر...")
-        # ۵ پیام آخر را بدون آپلود مجدد، فوروارد می‌کند
-        for msg_id in history[-5:]:
-            try:
-                bot.forward_message(chat_id, chat_id, msg_id)
-            except:
-                pass
-    
-    elif message.text == "🤖 گپ با هوش مصنوعی":
-        bot.reply_to(message, "حالت هوش مصنوعی فعال است. سوال خود را بپرسید:")
-    
+    # ۱. بخش اختصاصی: فوروارد پیام‌ها (فقط برای ادمین)
+    if text == "🔄 بازبینی پیام‌های شخصی (فقط مدیر)":
+        if user_id in ADMIN_IDS:
+            if os.path.exists(f"history_{user_id}.txt"):
+                with open(f"history_{user_id}.txt", "r") as f:
+                    history = f.read().splitlines()
+                
+                bot.send_message(user_id, "⏳ در حال بازنشر ۵ پیام آخر شما...")
+                for msg_id in history[-5:]:
+                    try:
+                        bot.forward_message(user_id, user_id, msg_id)
+                    except: pass
+            else:
+                bot.reply_to(message, "تاریخچه‌ای برای شما یافت نشد.")
+        else:
+            bot.reply_to(message, "❌ شما دسترسی به این بخش را ندارید.")
+
+    # ۲. بخش عمومی: گپ با جمنای
+    elif text == "🤖 گپ با هوش مصنوعی":
+        bot.reply_to(message, "هر سوالی دارید بپرسید، من آماده پاسخگویی هستم!")
+
     else:
-        # اگر دکمه نبود، به عنوان سوال از Gemini فرض می‌شود
+        # پاسخ عمومی جمنای به همه کاربران
         try:
-            bot.send_chat_action(chat_id, 'typing')
-            response = model.generate_content(message.text)
+            bot.send_chat_action(user_id, 'typing')
+            response = model.generate_content(text)
             bot.reply_to(message, response.text)
-        except:
-            bot.reply_to(message, "خطا در پاسخگویی هوش مصنوعی.")
+        except Exception as e:
+            print(f"Gemini Error: {e}")
+            bot.reply_to(message, "کمی گیج شدم! دوباره بپرس.")
 
 if __name__ == "__main__":
+    print("🚀 ربات ترکیبی (عمومی/خصوصی) بله روشن شد...")
     bot.polling(none_stop=True)
