@@ -9,9 +9,9 @@ GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 USER_LIST = [os.getenv("USER_1"), os.getenv("USER_2")]
 DEST_MAP = {os.getenv("USER_1"): os.getenv("DEST_1"), os.getenv("USER_2"): os.getenv("DEST_2")}
 
-# راه‌اندازی Gemini
+# راه‌اندازی Gemini با مدل پایدار pro
 genai.configure(api_key=GEMINI_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-pro')
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -40,19 +40,20 @@ def process_messages(message):
             response = model.generate_content(message.text)
             bot.reply_to(message, response.text)
         except Exception as e:
-            print(f"Gemini Error: {e}")
+            print(f"Gemini Error in Telegram: {e}")
+            # در صورت خطای مدل، اینجا لاگ می‌شود
 
     # --- بخش دوم: انتقال اختصاصی به بله (فقط برای حسن و همسر) ---
     if user_id in USER_LIST:
         dest_id = DEST_MAP.get(user_id)
         
-        # اگر متن بود، قبلاً جمنای جواب داده، فقط به بله می‌فرستیم و ذخیره می‌کنیم
+        # ارسال متن به بله و ذخیره در هیستوری
         if message.content_type == 'text':
             res = send_to_bale(dest_id, text=message.text)
             if res and res.get("ok"):
                 save_to_history(dest_id, res.get("result", {}).get("message_id"))
 
-        # اگر فایل بود (عکس، فیلم و...)
+        # ارسال فایل به بله
         else:
             file_type = message.content_type
             if file_type == 'photo':
@@ -80,7 +81,7 @@ def process_messages(message):
             report = bot.reply_to(message, f"📥 فایل: {f_name}\n⚖️ حجم: {size_mb} MB\n⏳ در حال انتقال به بله...")
 
             if size_mb > 20:
-                bot.edit_message_text(f"❌ خطا: حجم ({size_mb}MB) بیش از حد مجاز است.", chat_id=message.chat.id, message_id=report.message_id)
+                bot.edit_message_text(f"❌ خطا: حجم بیش از حد مجاز تلگرام است.", chat_id=message.chat.id, message_id=report.message_id)
                 return
 
             try:
@@ -94,7 +95,7 @@ def process_messages(message):
                 else:
                     bot.edit_message_text("⚠️ بله خطا داد.", chat_id=message.chat.id, message_id=report.message_id)
             except Exception as e:
-                bot.edit_message_text(f"❌ خطای سیستم: {str(e)}", chat_id=message.chat.id, message_id=report.message_id)
+                bot.edit_message_text(f"❌ خطای سیستم در انتقال فایل: {str(e)}", chat_id=message.chat.id, message_id=report.message_id)
 
-print("🚀 ربات هوشمند (تلگرام + بله) فعال شد...")
+print("🚀 ربات تلگرام با هوش مصنوعی و انتقال بله فعال شد...")
 bot.polling(none_stop=True)
