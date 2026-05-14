@@ -8,6 +8,21 @@ DEST_MAP = {os.getenv("USER_1"): os.getenv("DEST_1"), os.getenv("USER_2"): os.ge
 
 bot = telebot.TeleBot(TOKEN)
 
+def save_to_history(dest_id, msg_id):
+    file_path = f"history_{dest_id}.txt"
+    history = []
+    if os.path.exists(file_path):
+        with open(file_path, "r") as f:
+            history = f.read().splitlines()
+    
+    history.append(str(msg_id))
+    # نگه داشتن فقط ۵۰ آی‌دی آخر
+    if len(history) > 50:
+        history = history[-50:]
+    
+    with open(file_path, "w") as f:
+        f.write("\n".join(history))
+
 @bot.message_handler(func=lambda m: True, content_types=['text', 'photo', 'video', 'document', 'audio', 'voice'])
 def process_messages(message):
     user_id = str(message.from_user.id)
@@ -17,11 +32,12 @@ def process_messages(message):
     dest_id = DEST_MAP.get(user_id)
     
     if message.content_type == 'text':
-        send_to_bale(dest_id, text=message.text)
-        bot.reply_to(message, "✅ متن به بله ارسال شد.")
+        res = send_to_bale(dest_id, text=message.text)
+        if res and res.get("ok"):
+            save_to_history(dest_id, res.get("result", {}).get("message_id"))
+            bot.reply_to(message, "✅ متن به بله ارسال و در تاریخچه ثبت شد.")
     
     else:
-        # استخراج اطلاعات فایل
         file_type = message.content_type
         if file_type == 'photo':
             file_id = message.photo[-1].file_id
@@ -45,27 +61,23 @@ def process_messages(message):
             f_size = message.voice.file_size
 
         size_mb = round(f_size / (1024 * 1024), 2)
-        
-        # ارسال گزارش به تلگرام (مبدأ)
         report = bot.reply_to(message, f"📥 فایل: {f_name}\n⚖️ حجم: {size_mb} MB\n⏳ در حال انتقال...")
 
         if size_mb > 20:
-            bot.edit_message_text(f"❌ خطا: حجم ({size_mb}MB) از محدودیت ۲۰ مگابایت تلگرام بیشتر است.", chat_id=message.chat.id, message_id=report.message_id)
+            bot.edit_message_text(f"❌ خطا: حجم ({size_mb}MB) بیش از حد مجاز است.", chat_id=message.chat.id, message_id=report.message_id)
             return
 
         try:
             file_info = bot.get_file(file_id)
             downloaded = bot.download_file(file_info.file_path)
-            
-            # ارسال به بله با فرمت خودش
             res = send_to_bale(dest_id, file_data=downloaded, filename=f_name, caption=message.caption, file_type=file_type)
             
             if res and res.get("ok"):
-                bot.edit_message_text("✅ با موفقیت در بله آپلود شد.", chat_id=message.chat.id, message_id=report.message_id)
+                save_to_history(dest_id, res.get("result", {}).get("message_id"))
+                bot.edit_message_text("✅ با موفقیت در بله آپلود و در تاریخچه ثبت شد.", chat_id=message.chat.id, message_id=report.message_id)
             else:
-                bot.edit_message_text("⚠️ فایل دریافت شد اما بله خطا داد.", chat_id=message.chat.id, message_id=report.message_id)
+                bot.edit_message_text("⚠️ بله خطا داد.", chat_id=message.chat.id, message_id=report.message_id)
         except Exception as e:
             bot.edit_message_text(f"❌ خطای سیستم: {str(e)}", chat_id=message.chat.id, message_id=report.message_id)
 
-print("🚀 ربات هوشمند فعال شد...")
 bot.polling(none_stop=True)
