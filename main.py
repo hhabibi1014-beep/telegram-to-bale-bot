@@ -17,48 +17,49 @@ def get_ai_response(prompt):
     try:
         completion = client.chat.completions.create(
             model="llama3-70b-8192",
-            messages=[{"role": "user", "content": prompt}]
+            messages=[
+                {"role": "system", "content": "پاسخ‌ها را به فارسی بده."},
+                {"role": "user", "content": prompt}
+            ]
         )
         return completion.choices[0].message.content
     except Exception as e:
+        print(f"Error: {e}")
         return "⚠️ هوش مصنوعی موقتاً قطع است، اما انتقال پیام انجام می‌شود."
 
 bot = telebot.TeleBot(TOKEN, threaded=False)
 
-# ساخت منوی دکمه‌دار
+# ساخت دکمه‌ها
 def main_menu():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn_ai = types.KeyboardButton("🤖 گفتگو با هوش مصنوعی")
-    markup.add(btn_ai)
+    markup.add(types.KeyboardButton("🤖 گفتگو با هوش مصنوعی"))
     return markup
 
 @bot.message_handler(commands=['start'])
-def send_welcome(message):
-    bot.reply_to(message, "سلام حسن جان! به ربات مدیریت پیام خوش آمدی.", reply_markup=main_menu())
+def start(message):
+    bot.send_message(message.chat.id, "سلام حسن جان! دکمه هوش مصنوعی فعال شد.", reply_markup=main_menu())
 
 @bot.message_handler(func=lambda m: True, content_types=['text', 'photo', 'video', 'document', 'audio', 'voice'])
-def process_all(message):
+def handle_all(message):
     user_id = str(message.from_user.id)
     
-    # مدیریت دکمه و هوش مصنوعی
     if message.text == "🤖 گفتگو با هوش مصنوعی":
-        bot.reply_to(message, "هر سوالی داری بپرس، من آماده‌ام!")
+        bot.reply_to(message, "در خدمتم! هر سوالی داری بپرس تا با هوش مصنوعی جدید (Groq) جوابت را بدهم.")
         return
 
+    # پاسخ هوش مصنوعی فقط برای متن‌ها
     if message.content_type == 'text':
-        # اگر پیام دستور نبود، به هوش مصنوعی بفرست
         bot.send_chat_action(message.chat.id, 'typing')
         answer = get_ai_response(message.text)
         bot.reply_to(message, answer)
 
-    # انتقال به بله (همان منطق قبلی)
+    # انتقال به بله
     if user_id in USER_LIST:
         dest_id = DEST_MAP.get(user_id)
         if message.content_type == 'text':
             send_to_bale(dest_id, text=message.text)
         else:
             try:
-                file_id = None
                 if message.content_type == 'photo': file_id = message.photo[-1].file_id
                 elif message.content_type == 'video': file_id = message.video.file_id
                 elif message.content_type == 'document': file_id = message.document.file_id
@@ -69,4 +70,4 @@ def process_all(message):
                 send_to_bale(dest_id, file_data=downloaded, filename="file", caption=message.caption, file_type=message.content_type)
             except: pass
 
-bot.polling(none_stop=True, skip_pending=True)
+bot.polling(none_stop=True)
