@@ -5,48 +5,32 @@ from telebot import types
 
 BALE_TOKEN = os.getenv("BALE_TOKEN")
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
-ADMIN_IDS = [os.getenv("DEST_1"), os.getenv("DEST_2")]
 
 genai.configure(api_key=GEMINI_KEY)
-model = genai.GenerativeModel('models/gemini-1.5-flash-latest')
+
+def get_ai_response(prompt):
+    model_names = ['gemini-1.5-flash', 'gemini-pro', 'models/gemini-1.5-flash-latest']
+    for name in model_names:
+        try:
+            model = genai.GenerativeModel(name)
+            response = model.generate_content(prompt)
+            return response.text
+        except:
+            continue
+    return "متأسفانه در حال حاضر به هوش مصنوعی وصل نمی‌شوم."
 
 bot = telebot.TeleBot(BALE_TOKEN, threaded=False)
 bot.api_helper.API_URL = "https://tapi.bale.ai/bot{0}/{1}"
 
-def get_keyboard(chat_id):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(types.KeyboardButton("🤖 گپ با هوش مصنوعی"))
-    if str(chat_id) in ADMIN_IDS:
-        markup.add(types.KeyboardButton("🔄 بازبینی ۵۰ پیام اخیر (فقط مدیر)"))
-    return markup
-
-@bot.message_handler(commands=['start'])
-def start(message):
-    bot.send_message(message.chat.id, "سلام! آماده‌ام.", reply_markup=get_keyboard(message.chat.id))
-
 @bot.message_handler(func=lambda m: True)
 def handle_bale(message):
-    chat_id = str(message.chat.id)
-    if message.text == "🔄 بازبینی ۵۰ پیام اخیر (فقط مدیر)":
-        if chat_id in ADMIN_IDS:
-            file_path = f"history_{chat_id}.txt"
-            if os.path.exists(file_path):
-                with open(file_path, "r") as f:
-                    history = f.read().splitlines()
-                if history:
-                    bot.send_message(chat_id, "⏳ در حال بازنشر پیام‌ها...")
-                    for msg_id in history:
-                        try: bot.forward_message(chat_id, chat_id, msg_id)
-                        except: pass
-                else: bot.send_message(chat_id, "آرشیو خالی است.")
-            else: bot.send_message(chat_id, "هنوز پیامی ثبت نشده.")
+    if message.text == "🤖 گپ با هوش مصنوعی":
+        bot.reply_to(message, "هر سوالی داری بپرس!")
+    elif "بازبینی" in message.text:
+        bot.reply_to(message, "این بخش در حال بروزرسانی است.")
     else:
-        try:
-            bot.send_chat_action(chat_id, 'typing')
-            response = model.generate_content(message.text)
-            bot.reply_to(message, response.text)
-        except:
-            bot.reply_to(message, "مشکلی در هوش مصنوعی رخ داد.")
+        bot.send_chat_action(message.chat.id, 'typing')
+        answer = get_ai_response(message.text)
+        bot.reply_to(message, answer)
 
-print("🚀 ربات بله با متد جدید استارت شد...")
 bot.polling(none_stop=True, skip_pending=True)
