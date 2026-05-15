@@ -7,9 +7,8 @@ BALE_TOKEN = os.getenv("BALE_TOKEN")
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 ADMIN_IDS = [os.getenv("DEST_1"), os.getenv("DEST_2")]
 
-# تنظیم Gemini روی مدل پایدار pro
 genai.configure(api_key=GEMINI_KEY)
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('models/gemini-1.5-flash-latest')
 
 bot = telebot.TeleBot(BALE_TOKEN, threaded=False)
 bot.api_helper.API_URL = "https://tapi.bale.ai/bot{0}/{1}"
@@ -23,7 +22,7 @@ def get_keyboard(chat_id):
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.send_message(message.chat.id, "سلام! دستیار هوشمند آماده است.", reply_markup=get_keyboard(message.chat.id))
+    bot.send_message(message.chat.id, "سلام! آماده‌ام.", reply_markup=get_keyboard(message.chat.id))
 
 @bot.message_handler(func=lambda m: True)
 def handle_bale(message):
@@ -49,5 +48,5 @@ def handle_bale(message):
         except:
             bot.reply_to(message, "مشکلی در هوش مصنوعی رخ داد.")
 
-print("🚀 ربات بله با مدل gemini-pro فعال شد...")
+print("🚀 ربات بله با متد جدید استارت شد...")
 bot.polling(none_stop=True, skip_pending=True)
