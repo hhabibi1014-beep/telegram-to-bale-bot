@@ -1,5 +1,4 @@
 import telebot
-from telebot import apihelper
 import os
 import threading
 import time
@@ -24,7 +23,7 @@ def get_size(size_bytes):
     elif size_bytes < 1048576: return f"{size_bytes/1024:.2f} KB"
     else: return f"{size_bytes/1048576:.2f} MB"
 
-# --- تلگرام به بله (گزارش به هر دو طرف) ---
+# --- مسیر ۱: تلگرام به بله ---
 @bot_tele.message_handler(func=lambda m: True, content_types=['text', 'photo', 'video', 'document', 'audio', 'voice', 'video_note', 'sticker'])
 def telegram_to_bale(message):
     uid = str(message.from_user.id)
@@ -35,64 +34,70 @@ def telegram_to_bale(message):
         else:
             try:
                 obj = message.photo[-1] if message.content_type == 'photo' else getattr(message, message.content_type)
-                f_id, f_size = obj.file_id, obj.file_size
+                f_size = obj.file_size
                 size_str = get_size(f_size)
                 
-                # گزارش به تلگرام
-                report = bot_tele.reply_to(message, f"📊 حجم فایل: {size_str}\n⏳ در حال ارسال به بله...")
-                
-                # گزارش به بله (قبل از ارسال فایل)
-                send_to_bale(dest, text=f"📂 در حال دریافت فایل از تلگرام...\n📊 حجم: {size_str}\nنوع: {message.content_type}")
+                # گزارش به تلگرام و بله
+                report = bot_tele.reply_to(message, f"📊 حجم: {size_str}\n⏳ ارسال به بله...")
+                send_to_bale(dest, text=f"📂 فایل جدید در حال دریافت...\n📊 حجم: {size_str}")
 
                 if f_size > 20 * 1024 * 1024:
-                    bot_tele.edit_message_text(f"⚠️ سنگین ({size_str})! فقط گزارش به بله رفت.", message.chat.id, report.message_id)
+                    bot_tele.edit_message_text(f"⚠️ سنگین ({size_str})! فقط گزارش فرستاده شد.", message.chat.id, report.message_id)
                     return
 
-                f_info = bot_tele.get_file(f_id)
+                f_info = bot_tele.get_file(obj.file_id)
                 downloaded = bot_tele.download_file(f_info.file_path)
                 f_type = 'photo' if message.content_type == 'photo' else ('video' if message.content_type in ['video', 'video_note'] else message.content_type)
                 
                 send_to_bale(dest, file_data=downloaded, filename="file", caption=f"📊 حجم: {size_str}", file_type=f_type)
-                bot_tele.edit_message_text(f"✅ ارسال شد. ({size_str})", message.chat.id, report.message_id)
-            except Exception as e:
-                print(f"Error: {e}")
+                bot_tele.edit_message_text(f"✅ ارسال شد ({size_str})", message.chat.id, report.message_id)
+            except Exception as e: print(f"Tele Error: {e}")
 
-# --- بله به تلگرام (پشتیبانی از متن و فایل) ---
+# --- مسیر ۲: بله به تلگرام (متن + فایل + ویس) ---
 def run_bale_manual():
     offset = 0
+    print("📡 موتور بله فعال شد...")
     while True:
         try:
-            url = f"https://tapi.bale.ai/bot{BALE_TOKEN}/getUpdates?offset={offset}&timeout=30"
-            res = requests.get(url, timeout=35).json()
+            url = f"https://tapi.bale.ai/bot{BALE_TOKEN}/getUpdates?offset={offset}&timeout=20"
+            res = requests.get(url, timeout=25).json()
             if res.get("ok") and res.get("result"):
                 for up in res["result"]:
-                    m = up.get("message")
-                    if m:
-                        # ۱. متن
-                        if m.get("text"):
-                            bot_tele.send_message(USER_1, f"📥 بله (متن):\n\n{m['text']}")
-                        # ۲. عکس
-                        elif m.get("photo"):
-                            bot_tele.send_photo(USER_1, m['photo'][-1]['file_id'], caption="🖼 عکس از بله")
-                        # ۳. ویدیو
-                        elif m.get("video"):
-                            bot_tele.send_video(USER_1, m['video']['file_id'], caption="🎬 ویدیو از بله")
-                        # ۴. داکیومنت و فایل
-                        elif m.get("document"):
-                            bot_tele.send_document(USER_1, m['document']['file_id'], caption="📁 فایل از بله")
                     offset = up["update_id"] + 1
+                    msg = up.get("message")
+                    if not msg: continue
+                    
+                    # تشخیص و ارسال انواع پیام به USER_1 در تلگرام
+                    try:
+                        if msg.get("text"):
+                            bot_tele.send_message(USER_1, f"📥 بله:\n\n{msg['text']}")
+                        elif msg.get("photo"):
+                            bot_tele.send_photo(USER_1, msg['photo'][-1]['file_id'], caption="🖼 عکس از بله")
+                        elif msg.get("video"):
+                            bot_tele.send_video(USER_1, msg['video']['file_id'], caption="🎬 ویدیو از بله")
+                        elif msg.get("voice"):
+                            bot_tele.send_voice(USER_1, msg['voice']['file_id'], caption="🎤 ویس از بله")
+                        elif msg.get("document"):
+                            bot_tele.send_document(USER_1, msg['document']['file_id'], caption="📁 فایل از بله")
+                    except Exception as e: print(f"Error sending to Tele: {e}")
         except: time.sleep(2)
 
+# --- مدیریت اجرای ربات و رفع خطای Conflict ---
 if __name__ == "__main__":
-    print("🚀 سیستم فعال شد. خطاها در حال مدیریت هستند...")
-    # رفع خطای Conflict با کمی تاخیر در شروع
-    time.sleep(5) 
+    # ۱. حذف وب‌هوک احتمالی برای بله و تلگرام
+    requests.get(f"https://tapi.bale.ai/bot{BALE_TOKEN}/deleteWebhook")
+    
+    # ۲. شروع موتور بله در پس‌زمینه
     threading.Thread(target=run_bale_manual, daemon=True).start()
     
-    # حلقه برای جلوگیری از توقف ربات در صورت خطای تلگرام
+    # ۳. شروع موتور تلگرام با مدیریت خطا
+    print("🚀 ربات با مدیریت خطاها روشن شد...")
     while True:
         try:
-            bot_tele.polling(none_stop=True, interval=2, timeout=20)
+            bot_tele.polling(none_stop=True, interval=3, timeout=20)
         except Exception as e:
-            print(f"Polling error: {e}")
-            time.sleep(10)
+            if "409" in str(e):
+                print("⚠️ خطای Conflict (ربات جای دیگری باز است). ۱۰ ثانیه صبر...")
+                time.sleep(10)
+            else:
+                time.sleep(5)
