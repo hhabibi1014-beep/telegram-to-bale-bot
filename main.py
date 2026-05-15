@@ -3,17 +3,16 @@ import os
 import google.generativeai as genai
 from bale_sender import send_to_bale
 
-# تنظیمات متغیرها
+# تنظیمات
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 USER_LIST = [os.getenv("USER_1"), os.getenv("USER_2")]
 DEST_MAP = {os.getenv("USER_1"): os.getenv("DEST_1"), os.getenv("USER_2"): os.getenv("DEST_2")}
 
-# تنظیم هوش مصنوعی Gemini
+# تنظیم Gemini روی مدل پایدار pro
 genai.configure(api_key=GEMINI_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-pro')
 
-# راه‌اندازی ربات تلگرام
 bot = telebot.TeleBot(TOKEN, threaded=False)
 
 def save_to_history(dest_id, msg_id):
@@ -31,7 +30,6 @@ def save_to_history(dest_id, msg_id):
 def process_messages(message):
     user_id = str(message.from_user.id)
     
-    # پاسخ هوشمند Gemini در تلگرام
     if message.content_type == 'text':
         try:
             bot.send_chat_action(message.chat.id, 'typing')
@@ -40,7 +38,6 @@ def process_messages(message):
         except Exception as e:
             print(f"Gemini Error: {e}")
 
-    # انتقال اختصاصی به بله
     if user_id in USER_LIST:
         dest_id = DEST_MAP.get(user_id)
         if message.content_type == 'text':
@@ -61,5 +58,5 @@ def process_messages(message):
                     save_to_history(dest_id, res.get("result", {}).get("message_id"))
             except: pass
 
-print("🚀 ربات تلگرام فعال شد...")
+print("🚀 ربات تلگرام با مدل gemini-pro فعال شد...")
 bot.polling(none_stop=True, skip_pending=True)
