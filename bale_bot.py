@@ -1,31 +1,38 @@
 import telebot
 import os
-from groq import Groq
 
+# توکن‌ها را از متغیرهای Railway می‌گیرد
 BALE_TOKEN = os.getenv("BALE_TOKEN")
-GROQ_KEY = os.getenv("GROQ_API_KEY")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
-client = Groq(api_key=GROQ_KEY)
-bot = telebot.TeleBot(BALE_TOKEN, threaded=False)
-bot.api_helper.API_URL = "https://tapi.bale.ai/bot{0}/{1}"
+# آیدی تلگرام شما (USER_1) که پیام‌ها باید به آن تحویل داده شود
+MY_TELEGRAM_ID = os.getenv("USER_1") 
 
-def get_ai_response(prompt):
+# تعریف ربات بله (برای گوش دادن به پیام‌های بله)
+bot_bale = telebot.TeleBot(BALE_TOKEN)
+bot_bale.api_helper.API_URL = "https://tapi.bale.ai/bot{0}/{1}"
+
+# تعریف ربات تلگرام (فقط برای فرستادن پیام به شما)
+bot_tele = telebot.TeleBot(TELEGRAM_TOKEN)
+
+@bot_bale.message_handler(func=lambda m: True, content_types=['text', 'photo', 'video', 'document', 'audio', 'voice'])
+def handle_bale_to_telegram(message):
     try:
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return completion.choices[0].message.content
-    except:
-        return "⚠️ خطای اتصال به هوش مصنوعی در بله."
+        # ۱. اگر متن بود
+        if message.content_type == 'text':
+            bot_tele.send_message(MY_TELEGRAM_ID, f"📥 پیام جدید از بله:\n\n{message.text}")
+        
+        # ۲. اگر عکس بود
+        elif message.content_type == 'photo':
+            bot_tele.send_photo(MY_TELEGRAM_ID, message.photo[-1].file_id, caption=f"🖼 تصویر از بله\n{message.caption or ''}")
+            
+        # ۳. سایر فایل‌ها (ویدیو، داکیومنت و غیره)
+        else:
+            file_id = getattr(message, message.content_type).file_id
+            bot_tele.send_document(MY_TELEGRAM_ID, file_id, caption=f"📁 فایل ({message.content_type}) از بله")
+            
+    except Exception as e:
+        print(f"خطا در انتقال از بله به تلگرام: {e}")
 
-@bot.message_handler(func=lambda m: True)
-def handle_bale(message):
-    if message.text == "🤖 گفتگو با هوش مصنوعی":
-        bot.reply_to(message, "✅ هوش مصنوعی در بله فعال است. بپرس!")
-    else:
-        bot.send_chat_action(message.chat.id, 'typing')
-        answer = get_ai_response(message.text)
-        bot.reply_to(message, answer)
-
-bot.polling(none_stop=True)
+print("🚀 شنونده بله فعال شد (ارسال به تلگرام)...")
+bot_bale.polling(none_stop=True)
