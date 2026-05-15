@@ -1,99 +1,80 @@
 import telebot
 import os
+import threading
 from bale_sender import send_to_bale
 
-# تنظیمات از Railway
-TOKEN = os.getenv("TELEGRAM_TOKEN")
-USER_LIST = [os.getenv("USER_1"), os.getenv("USER_2")]
-DEST_MAP = {os.getenv("USER_1"): os.getenv("DEST_1"), os.getenv("USER_2"): os.getenv("DEST_2")}
+# --- تنظیمات توکن‌ها و آیدی‌ها ---
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+BALE_TOKEN = os.getenv("BALE_TOKEN")
+USER_1 = os.getenv("USER_1")
+USER_2 = os.getenv("USER_2")
+DEST_1 = os.getenv("DEST_1")
+DEST_2 = os.getenv("DEST_2")
 
-bot = telebot.TeleBot(TOKEN, threaded=True)
+USER_LIST = [USER_1, USER_2]
+DEST_MAP = {USER_1: DEST_1, USER_2: DEST_2}
 
-# تابع کمکی برای تبدیل بایت به حجم قابل خواندن
-def get_readable_size(size_in_bytes):
-    if size_in_bytes < 1024:
-        return f"{size_in_bytes} B"
-    elif size_in_bytes < 1024 * 1024:
-        return f"{size_in_bytes / 1024:.2f} KB"
-    else:
-        return f"{size_in_bytes / (1024 * 1024):.2f} MB"
+# --- تعریف ربات‌ها ---
+bot_tele = telebot.TeleBot(TELEGRAM_TOKEN, threaded=True)
+bot_bale = telebot.TeleBot(BALE_TOKEN)
+bot_bale.api_helper.API_URL = "https://tapi.bale.ai/bot{0}/{1}"
 
-# اضافه کردن تمام تایپ‌ها از جمله ویدیو نوت و استیکر
-@bot.message_handler(func=lambda m: True, content_types=['text', 'photo', 'video', 'document', 'audio', 'voice', 'video_note', 'sticker'])
-def handle_telegram_to_bale(message):
-    user_id = str(message.from_user.id)
-    
-    # بررسی دسترسی کاربر
-    if user_id in USER_LIST:
-        dest_id = DEST_MAP.get(user_id)
-        
-        # ۱. مدیریت پیام‌های متنی
+# --- تابع محاسبه حجم فایل ---
+def get_size(size_bytes):
+    if size_bytes < 1024: return f"{size_bytes} B"
+    elif size_bytes < 1048576: return f"{size_bytes/1024:.2f} KB"
+    else: return f"{size_bytes/1048576:.2f} MB"
+
+# --- بخش ۱: از تلگرام به بله ---
+@bot_tele.message_handler(func=lambda m: True, content_types=['text', 'photo', 'video', 'document', 'audio', 'voice', 'video_note', 'sticker'])
+def telegram_to_bale(message):
+    uid = str(message.from_user.id)
+    if uid in USER_LIST:
+        dest = DEST_MAP.get(uid)
         if message.content_type == 'text':
-            send_to_bale(dest_id, text=message.text)
-        
-        # ۲. مدیریت انواع فایل‌ها
+            send_to_bale(dest, text=message.text)
         else:
             try:
-                file_id = None
-                file_size = 0
-                file_type = 'document' # پیش‌فرض
+                # تشخیص فایل و حجم
+                obj = message.photo[-1] if message.content_type == 'photo' else getattr(message, message.content_type)
+                f_id, f_size = obj.file_id, obj.file_size
+                f_type = 'photo' if message.content_type == 'photo' else ('video' if message.content_type in ['video', 'video_note'] else message.content_type)
                 
-                # تشخیص نوع و استخراج اطلاعات
-                if message.content_type == 'photo':
-                    file_id = message.photo[-1].file_id
-                    file_size = message.photo[-1].file_size
-                    file_type = 'photo'
-                elif message.content_type == 'video':
-                    file_id = message.video.file_id
-                    file_size = message.video.file_size
-                    file_type = 'video'
-                elif message.content_type == 'video_note': # ویدیوهای دایره‌ای
-                    file_id = message.video_note.file_id
-                    file_size = message.video_note.file_size
-                    file_type = 'video' # در بله به عنوان ویدیو ارسال شود
-                elif message.content_type == 'document':
-                    file_id = message.document.file_id
-                    file_size = message.document.file_size
-                    file_type = 'document'
-                elif message.content_type == 'audio':
-                    file_id = message.audio.file_id
-                    file_size = message.audio.file_size
-                    file_type = 'audio'
-                elif message.content_type == 'voice':
-                    file_id = message.voice.file_id
-                    file_size = message.voice.file_size
-                    file_type = 'voice'
-                elif message.content_type == 'sticker':
-                    file_id = message.sticker.file_id
-                    file_size = message.sticker.file_size
-                    file_type = 'document'
-
-                readable_size = get_readable_size(file_size)
-                
+                size_str = get_size(f_size)
                 try:
-                    # دانلود فایل از تلگرام
-                    file_info = bot.get_file(file_id)
-                    downloaded = bot.download_file(file_info.file_path)
-                    
-                    # تهیه کپشن همراه با حجم
-                    caption_text = f"{message.caption or ''}\n\n📊 حجم: {readable_size}"
-                    
-                    # ارسال به بله با استفاده از فایل bale_sender شما
-                    send_to_bale(
-                        dest_id=dest_id, 
-                        file_data=downloaded, 
-                        filename=f"file_{file_id[:5]}", 
-                        caption=caption_text, 
-                        file_type=file_type
-                    )
-                
-                except Exception as download_error:
-                    # در صورت خطای دانلود (مثلاً فایل بالای ۲۰ مگابایت)
-                    error_msg = f"⚠️ فایل منتقل نشد (احتمالاً به دلیل محدودیت حجم)\n📊 حجم: {readable_size}\nنوع: {message.content_type}"
-                    send_to_bale(dest_id, text=error_msg)
+                    f_info = bot_tele.get_file(f_id)
+                    downloaded = bot_tele.download_file(f_info.file_path)
+                    caption = f"{message.caption or ''}\n\n📊 حجم: {size_str}"
+                    send_to_bale(dest, file_data=downloaded, filename="file", caption=caption, file_type=f_type)
+                except:
+                    send_to_bale(dest, text=f"⚠️ خطا در ارسال فایل سنگین!\n📊 حجم: {size_str}\nنوع: {message.content_type}")
+            except Exception as e: print(f"Tele Error: {e}")
 
-            except Exception as e:
-                print(f"خطای کلی در پردازش فایل: {e}")
+# --- بخش ۲: از بله به تلگرام ---
+@bot_bale.message_handler(func=lambda m: True, content_types=['text', 'photo', 'video', 'document', 'audio', 'voice'])
+def bale_to_telegram(message):
+    try:
+        # پیام‌ها از بله مستقیم به USER_1 (خودت) در تلگرام برود
+        if message.content_type == 'text':
+            bot_tele.send_message(USER_1, f"📥 از بله:\n\n{message.text}")
+        elif message.content_type == 'photo':
+            bot_tele.send_photo(USER_1, message.photo[-1].file_id, caption="🖼 عکس از بله")
+        else:
+            f_id = getattr(message, message.content_type).file_id
+            bot_tele.send_document(USER_1, f_id, caption=f"📁 فایل {message.content_type} از بله")
+    except Exception as e: print(f"Bale Error: {e}")
 
-print("🚀 ربات پل ارتباطی با پشتیبانی از Video Note فعال شد...")
-bot.polling(none_stop=True)
+# --- اجرای همزمان هر دو ربات ---
+def run_tele():
+    print("📡 تلگرام فعال شد...")
+    bot_tele.polling(none_stop=True)
+
+def run_bale():
+    print("📡 بله فعال شد...")
+    bot_bale.polling(none_stop=True)
+
+if __name__ == "__main__":
+    t1 = threading.Thread(target=run_tele)
+    t2 = threading.Thread(target=run_bale)
+    t1.start()
+    t2.start()
