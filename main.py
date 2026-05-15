@@ -3,17 +3,17 @@ import os
 import google.generativeai as genai
 from bale_sender import send_to_bale
 
-# تنظیمات
+# تنظیمات متغیرها
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 USER_LIST = [os.getenv("USER_1"), os.getenv("USER_2")]
 DEST_MAP = {os.getenv("USER_1"): os.getenv("DEST_1"), os.getenv("USER_2"): os.getenv("DEST_2")}
 
-# تنظیم هوش مصنوعی Gemini (نسخه پایدار برای جلوگیری از خطای 404)
+# تنظیم هوش مصنوعی Gemini
 genai.configure(api_key=GEMINI_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-# غیرفعال کردن threaded برای جلوگیری از خطای 409
+# راه‌اندازی ربات تلگرام
 bot = telebot.TeleBot(TOKEN, threaded=False)
 
 def save_to_history(dest_id, msg_id):
@@ -23,8 +23,7 @@ def save_to_history(dest_id, msg_id):
         with open(file_path, "r") as f:
             history = f.read().splitlines()
     history.append(str(msg_id))
-    if len(history) > 50:
-        history = history[-50:]
+    if len(history) > 50: history = history[-50:]
     with open(file_path, "w") as f:
         f.write("\n".join(history))
 
@@ -32,16 +31,16 @@ def save_to_history(dest_id, msg_id):
 def process_messages(message):
     user_id = str(message.from_user.id)
     
-    # پاسخ Gemini در تلگرام
+    # پاسخ هوشمند Gemini در تلگرام
     if message.content_type == 'text':
         try:
             bot.send_chat_action(message.chat.id, 'typing')
             response = model.generate_content(message.text)
             bot.reply_to(message, response.text)
         except Exception as e:
-            print(f"Gemini Error in Telegram: {e}")
+            print(f"Gemini Error: {e}")
 
-    # انتقال به بله (فقط برای شما و همسر)
+    # انتقال اختصاصی به بله
     if user_id in USER_LIST:
         dest_id = DEST_MAP.get(user_id)
         if message.content_type == 'text':
@@ -50,7 +49,6 @@ def process_messages(message):
                 save_to_history(dest_id, res.get("result", {}).get("message_id"))
         else:
             try:
-                # مدیریت انواع فایل
                 if message.content_type == 'photo': file_id = message.photo[-1].file_id
                 elif message.content_type == 'video': file_id = message.video.file_id
                 elif message.content_type == 'document': file_id = message.document.file_id
@@ -61,9 +59,7 @@ def process_messages(message):
                 res = send_to_bale(dest_id, file_data=downloaded, filename="file", caption=message.caption, file_type=message.content_type)
                 if res and res.get("ok"):
                     save_to_history(dest_id, res.get("result", {}).get("message_id"))
-            except:
-                pass
+            except: pass
 
-print("🚀 ربات تلگرام با متد جدید استارت شد...")
-# استفاده از skip_pending برای حل خطای 409
+print("🚀 ربات تلگرام فعال شد...")
 bot.polling(none_stop=True, skip_pending=True)
