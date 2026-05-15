@@ -9,9 +9,9 @@ GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 USER_LIST = [os.getenv("USER_1"), os.getenv("USER_2")]
 DEST_MAP = {os.getenv("USER_1"): os.getenv("DEST_1"), os.getenv("USER_2"): os.getenv("DEST_2")}
 
-# تنظیم Gemini روی مدل پایدار pro
+# تنظیم Gemini (استفاده از نام کامل مدل برای جلوگیری از 404)
 genai.configure(api_key=GEMINI_KEY)
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('models/gemini-1.5-flash-latest')
 
 bot = telebot.TeleBot(TOKEN, threaded=False)
 
@@ -58,5 +58,5 @@ def process_messages(message):
                     save_to_history(dest_id, res.get("result", {}).get("message_id"))
             except: pass
 
-print("🚀 ربات تلگرام با مدل gemini-pro فعال شد...")
+print("🚀 ربات تلگرام با متد جدید استارت شد...")
 bot.polling(none_stop=True, skip_pending=True)
